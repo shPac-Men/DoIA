@@ -80,6 +80,9 @@ func StartServer() {
 
 	r.GET("/hello", handler.GetOrders)
 	r.GET("/order/:id", handler.GetOrder)
+	r.GET("/calculatepage", handler.CalculatePage)
+
+	log.Println("   GET /calculatepage - зарегистрирован") //delite
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	log.Println("Server down")

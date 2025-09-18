@@ -61,4 +61,18 @@ func (h *Handler) GetOrder(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "order.html", gin.H{
 		"order": order,
 	})
+
+}
+
+func (h *Handler) CalculatePage(ctx *gin.Context) {
+	orders, err := h.Repository.GetOrders()
+	if err != nil {
+		logrus.Error(err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
+		"orders": orders,
+	})
 }
