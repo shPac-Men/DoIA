@@ -12,27 +12,59 @@ func NewRepository() (*Repository, error) {
 	return &Repository{}, nil
 }
 
-type Order struct { // вот наша новая структура
-	ID    int    // поля структур, которые передаются в шаблон
-	Title string // ОБЯЗАТЕЛЬНО должны быть написаны с заглавной буквы (то есть публичными)
+// type Order struct { // вот наша новая структура
+// 	ID    int    // поля структур, которые передаются в шаблон
+// 	Title string // ОБЯЗАТЕЛЬНО должны быть написаны с заглавной буквы (то есть публичными)
+// }
+
+type Order struct {
+	ID            int
+	Title         string
+	Image         string
+	Concentration string
+	PH            string
 }
 
 func (r *Repository) GetOrders() ([]Order, error) {
 	// имитируем работу с БД. Типа мы выполнили sql запрос и получили эти строки из БД
-	orders := []Order{ // массив элементов из наших структур
+	orders := []Order{
 		{
-			ID:    1,
-			Title: "first order",
+			ID:            1,
+			Title:         "NaOH",
+			Image:         "/static/img/64352489.jpg",
+			Concentration: "1M",
+			PH:            "14",
 		},
 		{
-			ID:    2,
-			Title: "second order",
+			ID:            2,
+			Title:         "HCl",
+			Image:         "/static/img/64352489.jpg",
+			Concentration: "0.5M",
+			PH:            "1",
 		},
 		{
-			ID:    3,
-			Title: "third order",
+			ID:            3,
+			Title:         "H2SO4",
+			Image:         "/static/img/64352489.jpg",
+			Concentration: "2M",
+			PH:            "0",
+		},
+		{
+			ID:            4,
+			Title:         "NaCl",
+			Image:         "/static/img/nacl.jpg",
+			Concentration: "0.9%",
+			PH:            "7",
+		},
+		{
+			ID:            5,
+			Title:         "NH3",
+			Image:         "/static/img/nh3.jpg",
+			Concentration: "1M",
+			PH:            "11",
 		},
 	}
+
 	// обязательно проверяем ошибки, и если они появились - передаем выше, то есть хендлеру
 	// тут я снова искусственно обработаю "ошибку" чисто чтобы показать вам как их передавать выше
 	if len(orders) == 0 {
