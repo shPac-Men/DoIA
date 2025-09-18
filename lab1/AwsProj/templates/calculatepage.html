@@ -64,16 +64,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metoda - Расчет веществ</title>
-    <link rel="stylesheet" href="/static/styles/calculate_style.css">
+    <link rel="stylesheet" href="/static/styles/calculatepage_style.css">
     <!-- или если используете общий файл: -->
     <!-- <link rel="stylesheet" href="/static/styles/cards_style.css"> -->
 </head>
 <body>
     <header>
-        <a href="/hello">
-            <img src="/static/img/image.svg" alt="На главную" width="50" height="50">
+        <a href="/hello" class="home-link">
+            <img src="/static/img/image.svg" alt="На главную">
         </a>
-        <h1>Расчет веществ</h1>
+
+        <div class="header-result">
+            <input type="text" placeholder="Результат" readonly>
+        </div>
     </header>
 
     <main>

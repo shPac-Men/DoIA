@@ -1,3 +1,4 @@
+/* Сброс */
 * {
     margin: 0;
     padding: 0;
@@ -8,52 +9,85 @@
 body {
     margin: 0;
     padding: 0;
-    background: #fff;
     color: #222;
+
+    /* Фон-картинка */
+    background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.7) 10%, transparent 25%), url("/static/img/calcbec.jpg") no-repeat center center fixed;
+    background-size: cover; /* растягивает картинку по экрану */
 }
 
-/* Черный хедер с белым текстом */
+/* Header */
 header {
     display: flex;
     align-items: center;
-    padding: 15px;
-    background: #000000; /* Черный фон */
-    border-bottom: 1px solid #333;
+    justify-content: space-between;
+    padding: 20px 30px;
+    background: #000;
+    color: #fff;
+    height: 160px;
+    position: relative;
 }
 
-header a {
+header a img {
+    width: 50px;
+    height: 50px;
+    display: block;
     margin-right: 20px;
     transition: transform 0.2s;
 }
 
-header a:hover {
+header a:hover img {
     transform: scale(1.05);
 }
 
 header h1 {
-    color: #ffffff; /* Белый текст */
     font-size: 24px;
     font-weight: normal;
-    margin: 0;
-}
-
-main {
-    padding: 30px;
+    flex: 1; /* чтобы заголовок занимал центр */
     text-align: center;
 }
 
+.header-result {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.header-result input {
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    color: #333;
+    min-width: 240px;
+}
+
+.header-result input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+/* Main */
+main {
+    padding: 30px 20px;
+}
+
+/* Карточки на всю ширину */
 .cards-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 25px;
-    margin-top: 20px;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .card {
+    background: #fafafa;
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 20px;
-    background: #fafafa;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -64,25 +98,25 @@ main {
 
 .card-img {
     width: 100%;
-    height: 160px;
+    height: 180px;
     object-fit: cover;
     border-radius: 6px;
     margin-bottom: 15px;
 }
 
 .card h3 {
+    font-size: 20px;
     margin: 10px 0 8px;
     color: #222;
-    font-size: 20px;
 }
 
 .card p {
-    margin: 6px 0;
     font-size: 14px;
+    margin: 6px 0;
     color: #555;
 }
 
-/* Стили для поля ввода массы */
+/* Поле ввода массы */
 .mass-input {
     margin: 15px 0;
     text-align: left;
@@ -91,91 +125,71 @@ main {
 .mass-input label {
     display: block;
     margin-bottom: 5px;
-    font-size: 14px;
-    color: #333;
     font-weight: bold;
+    color: #333;
+    font-size: 14px;
 }
 
 .mass-field {
     width: 100%;
     padding: 10px;
+    font-size: 14px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
     background: #fff;
 }
 
 .mass-field:focus {
     outline: none;
     border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
 /* Кнопка */
 .btn {
     display: inline-block;
-    margin-top: 10px;
-    padding: 10px 16px;
-    background: black;
-    color: white;
-    text-decoration: none;
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
     border: none;
     border-radius: 4px;
-    font-size: 14px;
     cursor: pointer;
+    background: #2c3e50;
+    color: #fff;
     transition: background 0.2s;
-    width: 100%;
 }
 
 .btn:hover {
-    background: #444;
-}
-
-.calculate-btn {
-    background: #2c3e50;
-}
-
-.calculate-btn:hover {
     background: #34495e;
 }
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    .cards-container {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 20px;
-    }
-    
     main {
-        padding: 20px;
+        padding: 20px 10px;
     }
-    
-    .card {
-        padding: 15px;
+
+    .card-img {
+        height: 160px;
     }
-    
+
     header {
         flex-direction: column;
         text-align: center;
         padding: 12px;
     }
-    
+
     header a {
-        margin-right: 0;
         margin-bottom: 12px;
     }
 }
 
 @media (max-width: 480px) {
-    .cards-container {
-        grid-template-columns: 1fr;
-    }
-    
-    header h1 {
-        font-size: 20px;
-    }
-    
     .card-img {
         height: 140px;
+    }
+
+    header h1 {
+        font-size: 20px;
     }
 }
