@@ -74,7 +74,7 @@ func StartServer() {
 	r := gin.Default()
 	// добавляем наш html/шаблон
 	r.LoadHTMLGlob("../../templates/*")
-	r.Static("/static", "../../resources")
+	r.Static("/static", "../../resources") ///static
 	// слева название папки, в которую выгрузится наша статика
 	// справа путь к папке, в которой лежит статика
 

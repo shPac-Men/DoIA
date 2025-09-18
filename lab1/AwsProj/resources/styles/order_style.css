@@ -1,15 +1,129 @@
-header img { /*задаем размер картинки*/
-    width: 50px;
-    height: 50px;
-    cursor: pointer;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
 }
 
-h1 {
-    color: #333;
+body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #222;
+}
+
+/* Черный хедер с белым текстом */
+.header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #000000; /* Черный фон */
+    border-bottom: 1px solid #333;
+}
+
+.home-button {
+    margin-right: 20px;
+    transition: transform 0.2s;
+}
+
+.home-button:hover {
+    transform: scale(1.05);
+}
+
+.header h1 {
+    color: #ffffff; /* Белый текст */
     font-size: 24px;
+    font-weight: normal;
 }
 
-h2 {
-    color: #333;
-    font-size: 18px;
+.card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 25px;
+    background: #fafafa;
+    max-width: 450px;
+    margin: 30px auto;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+.formula {
+    font-size: 36px;
+    font-weight: bold;
+    text-align: center;
+    margin: 20px 0;
+    color: #222;
+}
+
+.property {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin: 10px 0;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 6px;
+}
+
+.property-title {
+    font-size: 14px;
+    color: #666;
+}
+
+.property-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #222;
+}
+
+.order-info {
+    margin-top: 25px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 6px;
+}
+
+.order-id {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #222;
+}
+
+.order-title {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Адаптивность */
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        text-align: center;
+        padding: 12px;
+    }
+    
+    .home-button {
+        margin-right: 0;
+        margin-bottom: 12px;
+    }
+    
+    .card {
+        padding: 20px;
+        margin: 20px 15px;
+    }
+    
+    .formula {
+        font-size: 28px;
+    }
+    
+    .property {
+        padding: 10px 12px;
+    }
 }

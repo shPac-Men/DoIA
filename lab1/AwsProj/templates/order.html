@@ -1,13 +1,79 @@
-<html lang="en">
+<!-- <!DOCTYPE html>
+<html lang="ru">
 <head>
-    <title>Metoda</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metoda - Детали заказа</title>
     <link rel="stylesheet" href="/static/styles/order_style.css">
 </head>
-<header>
-    <h1>
-        <a href="/hello"><img src="/static/img/image.svg" alt="home" width="50px" height="50px"></a>
-    </h1>
-</header>
-    <h1>Информация о заказе №{{ .order.ID }}</h1>
-    <h2>Заголовок: {{ .order.Title }}</h2>
+<body>
+    <div class="header">
+        <a href="/hello" class="home-button">
+            <img src="/static/img/image.svg" alt="На главную" width="40" height="40">
+        </a>
+        <h1>Детали реактива</h1>
+    </div>
+
+    <div class="card">
+         Химическая формула 
+        <div class="formula">H₂SO₄</div>
+
+         Свойства 
+        <div class="property">
+            <div class="property-title">Концентрация</div>
+            <div class="property-value">1M</div>
+        </div>
+
+        <div class="property">
+            <div class="property-title">pH</div>
+            <div class="property-value">14</div>
+        </div>
+
+       
+         <div class="order-info">
+            <div class="order-id">Информация о заказе №{{.ID}}</div>
+            <div class="order-title">Заголовок: {{.Title}}</div>
+        </div> 
+    </div>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metoda - Информация о реактиве</title>
+    <link rel="stylesheet" href="/static/styles/order_style.css">
+</head>
+<body>
+    <div class="header">
+        <a href="/hello" class="home-button">
+            <img src="/static/img/image.svg" alt="На главную" width="40" height="40">
+        </a>
+        <h1>Информация о реактиве</h1>
+    </div>
+
+    <div class="card">
+        <!-- Химическая формула (Title) -->
+        <div class="formula">{{.order.Title}}</div>
+
+        <!-- Свойства -->
+        <div class="property">
+            <div class="property-title">Концентрация</div>
+            <div class="property-value">{{.order.Concentration}}</div>
+        </div>
+
+        <div class="property">
+            <div class="property-title">pH</div>
+            <div class="property-value">{{.order.PH}}</div>
+        </div>
+
+        <!-- Информация о заказе 
+        <div class="order-info">
+            <div class="order-id">название реактиве</div>
+            <div class="order-title">Название: {{.order.Title}}</div>
+        </div>-->
+    </div>
+</body>
 </html>

@@ -31,14 +31,14 @@ func (r *Repository) GetOrders() ([]Order, error) {
 		{
 			ID:            1,
 			Title:         "NaOH",
-			Image:         "/static/img/64352489.jpg",
+			Image:         "/static/img/NaOH.jpg",
 			Concentration: "1M",
 			PH:            "14",
 		},
 		{
 			ID:            2,
 			Title:         "HCl",
-			Image:         "/static/img/64352489.jpg",
+			Image:         "/static/img/Hcl.jpg",
 			Concentration: "0.5M",
 			PH:            "1",
 		},
@@ -53,7 +53,7 @@ func (r *Repository) GetOrders() ([]Order, error) {
 			ID:            4,
 			Title:         "NaCl",
 			Image:         "/static/img/nacl.jpg",
-			Concentration: "0.9%",
+			Concentration: "0.15M",
 			PH:            "7",
 		},
 		{
