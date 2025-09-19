@@ -12,7 +12,7 @@ body {
     color: #222;
 
     /* Фон-картинка */
-    background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.7) 10%, transparent 25%), url("/static/img/calcbec.jpg") no-repeat center center fixed;
+    background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.7) 10%, transparent 25%), url("http://localhost:9000/staticimages/calcbec.jpg") no-repeat center center fixed;
     background-size: cover; /* растягивает картинку по экрану */
 }
 

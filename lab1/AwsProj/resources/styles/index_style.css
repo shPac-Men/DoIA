@@ -21,7 +21,7 @@ html, body {
 /* Hero секция */
 .hero {
     height: 50vh;
-    background: url("/static/img/MainFone.jpg") no-repeat center center;
+    background: url("http://localhost:9000/staticimages/MainFone.jpg") no-repeat center center;
     background-size: cover;
     position: relative;
     color: white;
