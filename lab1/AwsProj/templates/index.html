@@ -8,21 +8,21 @@
     <section class="hero">
         <header>
             <h1>
-                <a href="/hello"><img src="http://localhost:9000/staticimages/image.svg" alt="home"></a>
+                <a href="/chemistry"><img src="http://localhost:9000/staticimages/image.svg" alt="home"></a>
             </h1>
             <a href="/calculatepage" class="cart">
                 <img src="http://localhost:9000/staticimages/breaker.svg" alt="cart">
             </a>
         </header>
-
-        <!-- Поиск по центру -->
-        <div class="hero-content">
-            <form action="/hello" method="GET">
-                <input type="text" name="query" placeholder="Введите запрос" value="{{ .query }}">
-                <button type="submit">Найти</button>
-            </form>
-        </div>
     </section>
+
+    <!-- Поиск под хедером -->
+    <div class="search-section">
+        <form action="/chemistry" method="GET">
+            <input type="text" name="query" placeholder="Введите запрос" value="{{ .query }}">
+            <button type="submit">Найти</button>
+        </form>
+    </div>
 
     <!-- Основная часть (белая) -->
     <main>

@@ -1,4 +1,4 @@
-/* Сброс */
+/* Сброс и базовые стили */
 * {
     margin: 0;
     padding: 0;
@@ -10,10 +10,9 @@ body {
     margin: 0;
     padding: 0;
     color: #222;
-
-    /* Фон-картинка */
-    background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.7) 10%, transparent 25%), url("http://localhost:9000/staticimages/calcbec.jpg") no-repeat center center fixed;
-    background-size: cover; /* растягивает картинку по экрану */
+    background: url("http://localhost:9000/staticimages/calcbec.jpg") no-repeat center center fixed;
+    background-size: cover;
+    min-height: 100vh;
 }
 
 /* Header */
@@ -26,27 +25,25 @@ header {
     color: #fff;
     height: 160px;
     position: relative;
+    z-index: 100;
 }
 
-header a img {
+.home-link {
+    flex-shrink: 0;
+}
+
+.home-link img {
     width: 50px;
     height: 50px;
     display: block;
-    margin-right: 20px;
     transition: transform 0.2s;
 }
 
-header a:hover img {
+.home-link:hover img {
     transform: scale(1.05);
 }
 
-header h1 {
-    font-size: 24px;
-    font-weight: normal;
-    flex: 1; /* чтобы заголовок занимал центр */
-    text-align: center;
-}
-
+/* Результат по центру хедера */
 .header-result {
     position: absolute;
     left: 50%;
@@ -54,27 +51,139 @@ header h1 {
 }
 
 .header-result input {
-    padding: 10px 14px;
-    border: 1px solid #ddd;
+    padding: 12px 16px;
+    border: 2px solid #ddd;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 16px;
     background: #fff;
     color: #333;
-    min-width: 240px;
+    min-width: 260px;
+    width: 100%;
+    text-align: center;
 }
 
 .header-result input:focus {
     outline: none;
     border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
 }
 
-/* Main */
+/* Секция температуры со счетчиком */
+.temperature-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 30px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    position: relative;
+    z-index: 10;
+    gap: 30px; /* Увеличиваем расстояние между элементами */
+}
+
+/* Контейнер для счетчика */
+.counter-container {
+    flex-shrink: 0;
+    margin-right: auto; /* Прижимаем счетчик к левому краю */
+}
+
+.counter {
+    font-size: 16px;
+    font-weight: bold;
+    color: #000;
+    background: #fff;
+    padding: 12px 18px;
+    border-radius: 6px;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.counter:hover {
+    background: #f1f1f1;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+}
+
+#itemsCount {
+    font-weight: 900;
+    color: #007bff;
+    font-size: 18px;
+}
+
+/* Форма температуры по центру */
+.temperature-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto; /* Центрируем форму температуры */
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 14px 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    backdrop-filter: blur(4px);
+}
+
+.input-group label {
+    font-weight: bold;
+    color: #fff;
+    font-size: 16px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+.input-group input[type="number"] {
+    padding: 10px 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 6px;
+    width: 120px;
+    font-size: 16px;
+    font-weight: bold;
+    background: rgba(255,255,255,0.8);
+    color: #000;
+}
+
+.input-group input[type="number"]:focus {
+    border-color: #00d4ff;
+    box-shadow: 0 0 10px rgba(0,212,255,0.5);
+}
+
+.btn-temperature {
+    padding: 10px 22px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+}
+
+.btn-temperature:hover {
+    background: #f1f1f1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+}
+
+/* Main content */
 main {
     padding: 30px 20px;
+    position: relative;
+    z-index: 1;
 }
 
-/* Карточки на всю ширину */
 .cards-container {
     display: flex;
     flex-direction: column;
@@ -116,7 +225,6 @@ main {
     color: #555;
 }
 
-/* Поле ввода массы */
 .mass-input {
     margin: 15px 0;
     text-align: left;
@@ -145,42 +253,65 @@ main {
     box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
-/* Кнопка */
 .btn {
     display: inline-block;
     width: 100%;
     padding: 12px;
     font-size: 14px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    background: #2c3e50;
-    color: #fff;
-    transition: background 0.2s;
+    background: #fff;
+    color: #000;
+    font-weight: bold;
+    transition: all 0.3s;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
 }
 
 .btn:hover {
-    background: #34495e;
+    background: #f1f1f1;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.3);
 }
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    main {
-        padding: 20px 10px;
+    .temperature-section {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
     }
-
-    .card-img {
-        height: 160px;
+    
+    .counter-container {
+        margin-right: 0;
+        order: 1;
     }
-
+    
+    .temperature-form {
+        order: 2;
+        margin: 0;
+    }
+    
     header {
         flex-direction: column;
-        text-align: center;
-        padding: 12px;
+        height: auto;
+        padding: 15px;
+        gap: 15px;
     }
-
-    header a {
-        margin-bottom: 12px;
+    
+    .header-result {
+        position: static;
+        transform: none;
+        order: 2;
+        width: 100%;
+    }
+    
+    .home-link {
+        order: 1;
+    }
+    
+    .header-result input {
+        min-width: auto;
+        width: 100%;
     }
 }
 
@@ -188,8 +319,59 @@ main {
     .card-img {
         height: 140px;
     }
+    
+    .card {
+        padding: 15px;
+    }
+    
+    .card h3 {
+        font-size: 18px;
+    }
+    
+    .input-group {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 10px 15px;
+    }
+    
+    .input-group label {
+        font-size: 14px;
+    }
+    
+    .input-group input[type="number"] {
+        width: 100px;
+    }
+    
+    .btn-temperature {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+    
+    .counter {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+}
 
-    header h1 {
-        font-size: 20px;
+/* Улучшение читаемости текста на фоне */
+.card h3,
+.card p,
+.mass-input label {
+    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+}
+
+/* Плавная анимация появления */
+.cards-container {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

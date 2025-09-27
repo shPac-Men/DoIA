@@ -15,7 +15,7 @@ html, body {
     display: inline-block;
     cursor: pointer;
     position: relative;
-    z-index: 2;          /* выше header */
+    z-index: 2;
 }
 
 /* Hero секция */
@@ -35,8 +35,8 @@ html, body {
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.5);
-    z-index: 0;           /* ставим ниже всего */
-    pointer-events: none;  /* клики проходят сквозь */
+    z-index: 0;
+    pointer-events: none;
 }
 
 header {
@@ -45,25 +45,25 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 0 20px;
-    height: 60px; /* фиксированная высота header */
+    height: 60px;
     z-index: 1;
 }
 
 header h1 a img {
-    width: 50px;  /* ширина */
-    height: 50px; /* высота */
+    width: 50px;
+    height: 50px;
     display: block;
 }
 
 /* Корзина */
 .cart img {
-    width: 40px;  /* ширина */
-    height: 40px; /* высота */
+    width: 40px;
+    height: 40px;
     display: block;
     cursor: pointer;
 }
 
-/* Поиск */
+/* Убираем старые стили поиска из hero-content */
 .hero-content {
     position: relative;
     height: 100%;
@@ -89,7 +89,8 @@ header h1 a img {
     display: block;
 }
 
-form {
+/* ОБЩИЙ СТИЛЬ ДЛЯ ФОРМ - УБИРАЕМ ИЛИ ДЕЛАЕМ СПЕЦИФИЧНЫМ */
+.hero-content form {
     display: flex;
     align-items: center;
     background: white;
@@ -97,14 +98,14 @@ form {
     overflow: hidden;
 }
 
-form input[type="text"] {
+.hero-content form input[type="text"] {
     padding: 10px;
     width: 250px;
     border: none;
     outline: none;
 }
 
-form button {
+.hero-content form button {
     padding: 10px;
     border: none;
     background: #333;
@@ -142,7 +143,6 @@ main {
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
 }
 
-/* Картинка */
 .card-img {
     width: 100%;
     height: 140px;
@@ -150,7 +150,6 @@ main {
     margin-bottom: 12px;
 }
 
-/* Текст */
 .card h3 {
     font-size: 18px;
     margin: 8px 0;
@@ -163,7 +162,6 @@ main {
     color: #333;
 }
 
-/* Кнопка */
 .btn {
     display: inline-block;
     margin-top: 10px;
@@ -178,4 +176,48 @@ main {
 
 .btn:hover {
     background: #444;
+}
+
+/* Секция поиска - ИСПРАВЛЕННЫЕ СТИЛИ */
+.search-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+    background: #fff;
+    width: 100%;
+}
+
+.search-section form {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: auto;
+    margin: 0 auto;
+}
+
+.search-section form input[type="text"] {
+    padding: 12px;
+    width: 300px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+}
+
+.search-section form button {
+    padding: 12px 20px;
+    border: none;
+    background: #333;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s;
+}
+
+.search-section form button:hover {
+    background: #555;
 }

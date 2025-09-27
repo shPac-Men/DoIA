@@ -1,63 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metoda - Расчет веществ</title>
-    <link rel="stylesheet" href="/static/styles/cards_style.css">
-</head>
-<body>
-    <header>
-        <a href="/hello">
-            <img src="/static/img/image.svg" alt="На главную" width="50" height="50">
-        </a>
-        <h1>Расчет веществ</h1>
-    </header>
-
-    <main>
-        <div class="cards-container">
-            {{ range .orders }}
-            <div class="card">
-                <img src="{{ .Image }}" alt="{{ .Title }}" class="card-img">
-                <h3>{{ .Title }}</h3>
-                <p><strong>pH:</strong> {{ .PH }} при {{ .Concentration }} 25°C</p>
-                
-               
-                <div class="mass-input">
-                    <label for="mass-{{ .ID }}">Масса (г):</label>
-                    <input type="number" id="mass-{{ .ID }}" class="mass-field" placeholder="0.0" step="0.1" min="0">
-                </div>
-
-                
-                <button class="btn calculate-btn" data-id="{{ .ID }}">
-                    Сформировать заявку
-                </button>
-            </div>
-            {{ end }}
-        </div>
-    </main>
-
-    <script>
-        // Базовый обработчик для кнопок (можно расширить)
-        document.querySelectorAll('.calculate-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const massInput = document.getElementById('mass-' + id);
-                const mass = massInput.value;
-                
-                if (!mass || mass <= 0) {
-                    alert('Пожалуйста, введите корректную массу вещества');
-                    return;
-                }
-                
-                alert(`Заявка для вещества ID: ${id} с массой: ${mass}г отправлена в обработку`);
-                // Здесь будет отправка данных на сервер
-            });
-        });
-    </script>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -65,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metoda - Расчет веществ</title>
     <link rel="stylesheet" href="/static/styles/calculatepage_style.css">
-    <!-- или если используете общий файл: -->
-    <!-- <link rel="stylesheet" href="/static/styles/cards_style.css"> -->
 </head>
 <body>
     <header>
-        <a href="/hello" class="home-link">
+        <a href="/chemistry" class="home-link">
             <img src="http://localhost:9000/staticimages/image.svg" alt="На главную">
         </a>
 
@@ -79,6 +17,21 @@
         </div>
     </header>
 
+    <!-- Поле для ввода температуры со счетчиком элементов -->
+    <div class="temperature-section">
+        <div class="counter-container">
+            <div class="counter">Элементов: <span id="itemsCount">0</span></div>
+        </div>
+        
+        <form class="temperature-form">
+            <div class="input-group">
+                <label for="temperature">Температура (°C):</label>
+                <input type="number" id="temperature" placeholder="25" step="0.1" min="-273" max="1000" value="25">
+                <button type="button" class="btn-temperature">Применить</button>
+            </div>
+        </form>
+    </div>
+
     <main>
         <div class="cards-container">
             {{ range .orders }}
@@ -101,6 +54,11 @@
     </main>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            document.getElementById('itemsCount').textContent = cards.length;
+        });
+
         document.querySelectorAll('.calculate-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -114,6 +72,12 @@
                 
                 alert(`Заявка для вещества ID: ${id} с массой: ${mass}г отправлена в обработку`);
             });
+        });
+
+        // Обработчик для кнопки температуры (пока просто alert)
+        document.querySelector('.btn-temperature').addEventListener('click', function() {
+            const temperature = document.getElementById('temperature').value;
+            alert(`Температура установлена: ${temperature}°C (функционал в разработке)`);
         });
     </script>
 </body>
