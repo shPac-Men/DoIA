@@ -27,8 +27,8 @@ func StartServer() {
 	// справа путь к папке, в которой лежит статика
 
 	r.GET("/chemistry", handler.GetOrders)
-	r.GET("/order/:id", handler.GetOrder)
-	r.GET("/calculatepage", handler.CalculatePage)
+	r.GET("/element/:id", handler.GetOrder)
+	r.GET("/mixingpage", handler.CalculatePage)
 
 	log.Println("   GET /calculatepage - зарегистрирован") //delite
 

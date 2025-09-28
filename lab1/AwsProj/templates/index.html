@@ -10,7 +10,7 @@
             <h1>
                 <a href="/chemistry"><img src="http://localhost:9000/staticimages/image.svg" alt="home"></a>
             </h1>
-            <a href="/calculatepage" class="cart">
+            <a href="/mixingpage" class="cart">
                 <img src="http://localhost:9000/staticimages/breaker.svg" alt="cart">
             </a>
         </header>
@@ -34,7 +34,7 @@
                 <h3>{{ .Title }}</h3>
                 <p><strong>Концентрация:</strong> {{ .Concentration }}</p>
                 <p><strong>pH:</strong> {{ .PH }}</p>
-                <a href="/order/{{ .ID }}" class="btn">Подробнее</a>
+                <a href="/element/{{ .ID }}" class="btn">Подробнее</a>
             </div>
             {{ end }}
         </div>
