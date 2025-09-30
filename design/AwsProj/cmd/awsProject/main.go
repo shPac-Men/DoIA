@@ -1,24 +1,37 @@
 package main
 
 import (
-	"AwsProj/internal/api"
 	"fmt"
-	"log"
-	"os"
+
+	"AwsProj/internal/app/config"
+	"AwsProj/internal/app/dsn"
+	"AwsProj/internal/app/handler"
+	"AwsProj/internal/app/repository"
+	"AwsProj/internal/pkg"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	dir, _ := os.Getwd()
-	fmt.Println("Current directory:", dir)
-
-	// Проверяем существует ли папка
-	if _, err := os.Stat("../../resources"); os.IsNotExist(err) {
-		fmt.Println("ERROR: resources folder not found!")
-	} else {
-		fmt.Println("Resources folder found")
+	_ = godotenv.Load("../../.env")
+	router := gin.Default()
+	conf, err := config.NewConfig()
+	if err != nil {
+		logrus.Fatalf("error loading config: %v", err)
 	}
 
-	log.Println("app start")
-	api.StartServer()
-	log.Println("app down")
+	postgresString := dsn.FromEnv()
+	fmt.Println(postgresString)
+
+	rep, errRep := repository.New(postgresString)
+	if errRep != nil {
+		logrus.Fatalf("error initializing repository: %v", errRep)
+	}
+
+	hand := handler.NewHandler(rep)
+
+	application := pkg.NewApp(conf, router, hand)
+	application.RunApp()
 }
