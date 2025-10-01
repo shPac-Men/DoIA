@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
-	"github.com/sirupsen/logrus"
 )
 
 func (r *Repository) GetAllChats() ([]ds.Chat, error) {
@@ -57,24 +55,24 @@ func (r *Repository) SearchChatsByName(name string) ([]ds.Chat, error) {
 }
 
 // GetCartCount для получения количества услуг в заявке (чатов в сообщении в моем случае)
-func (r *Repository) GetCartCount() int64 {
-	var messageID uint
-	var count int64
-	creatorID := 1
-	// пока что мы захардкодили id создателя заявки, в последующем вы сделаете авторизацию и будете получать его из JWT
+// func (r *Repository) GetCartCount() int64 {
+// 	var messageID uint
+// 	var count int64
+// 	creatorID := 1
+// 	// пока что мы захардкодили id создателя заявки, в последующем вы сделаете авторизацию и будете получать его из JWT
 
-	err := r.db.Model(&ds.Message{}).Where("creator_id = ? AND status = ?", creatorID, "черновик").Select("id").First(&messageID).Error
-	if err != nil {
-		return 0
-	}
+// 	err := r.db.Model(&ds.Message{}).Where("creator_id = ? AND status = ?", creatorID, "черновик").Select("id").First(&messageID).Error
+// 	if err != nil {
+// 		return 0
+// 	}
 
-	err = r.db.Model(&ds.MessageChat{}).Where("message_id = ?", messageID).Count(&count).Error
-	if err != nil {
-		logrus.Println("Error counting records in lists_chats:", err)
-	}
+// 	err = r.db.Model(&ds.MessageChat{}).Where("message_id = ?", messageID).Count(&count).Error
+// 	if err != nil {
+// 		logrus.Println("Error counting records in lists_chats:", err)
+// 	}
 
-	return count
-}
+// 	return count
+// }
 
 func (r *Repository) DeleteChat(chatID uint) error {
 	err := r.db.Model(&ds.Chat{}).Where("id = ?", chatID).UpdateColumn("is_delete", true).Error

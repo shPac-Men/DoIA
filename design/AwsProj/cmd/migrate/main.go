@@ -23,6 +23,10 @@ func main() {
 		log.Fatalf("Error loading .env from %s: %v", envPath, err)
 	}
 
+	log.Printf("Loaded DB_HOST: '%s'", os.Getenv("DB_HOST"))
+	log.Printf("Loaded DB_USER: '%s'", os.Getenv("DB_USER"))
+	log.Printf("Loaded DB_NAME: '%s'", os.Getenv("DB_NAME"))
+	log.Printf("Loaded DB_PASSWORD: '%s'", os.Getenv("DB_PASSWORD"))
 	// Проверяем что переменные загрузились
 	if os.Getenv("DB_HOST") == "" {
 		log.Fatal("DB_HOST is empty - .env not loaded correctly")
@@ -35,9 +39,9 @@ func main() {
 
 	// Migrate the schema
 	err = db.AutoMigrate(
-		&ds.Chat{},
-		&ds.Message{},
-		&ds.MessageChat{},
+		&ds.Elements{},
+		&ds.Mixed{},
+		&ds.Elements{},
 		&ds.Users{},
 	)
 	if err != nil {

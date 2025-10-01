@@ -1,0 +1,28 @@
+<html lang="en">
+<head>
+    <title>Метода — Карточки</title>
+    <link rel="stylesheet" href="/static/styles/cards_style.css">
+</head>
+<body>
+    <header>
+        <h1>
+            <a href="/chemistry"><img src="http://localhost:9000/staticimages/image.svg" alt="home" width="50" height="50"></a>
+        </h1>
+    </header>
+
+    <main>
+        <h2>Список веществ</h2>
+        <div class="cards-container">
+            {{ range .data }}
+            <div class="card">
+                <img src="{{ .Image }}" alt="{{ .Title }}" class="card-img">
+                <h3>{{ .Title }}</h3>
+                <p><strong>Концентрация:</strong> {{ .Concentration }}</p>
+                <p><strong>pH:</strong> {{ .PH }}</p>
+                <a href="/element/{{ .ID }}" class="btn">Подробнее</a>
+            </div>
+            {{ end }}
+        </div>
+    </main>
+</body>
+</html>
