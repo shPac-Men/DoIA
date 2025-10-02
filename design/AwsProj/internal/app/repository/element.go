@@ -201,8 +201,10 @@ func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
 	return &cart, cartItems, nil
 }
 
-func (r *Repository) CompleteCartAndCreateNew(userID uint) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+func (r *Repository) CompleteCartAndCreateNew(userID uint, addedWater float64) (float32, error) {
+	var calculatedPH float32
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// 1. Находим активную корзину (draft)
 		var cart ds.Mixed
 		err := tx.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
@@ -213,10 +215,10 @@ func (r *Repository) CompleteCartAndCreateNew(userID uint) error {
 			return err
 		}
 
-		// 2. Рассчитываем pH (упрощенная логика)
-		calculatedPH := r.CalculatePH(cart.ID)
+		// 2. Рассчитываем pH (заглушка)
+		calculatedPH = 6.5 // временная заглушка
 
-		// 3. Обновляем корзину: меняем статус и записываем pH
+		// 3. Обновляем корзину
 		cart.Status = "completed"
 		cart.Ph = calculatedPH
 		cart.DateUpdate = time.Now()
@@ -232,9 +234,10 @@ func (r *Repository) CompleteCartAndCreateNew(userID uint) error {
 			DateCreate:    time.Now(),
 			DateUpdate:    time.Now(),
 			CreatorID:     userID,
-			ModeratorID:   userID, // или можно использовать хардкод 1
-			Ph:            0,
+			ModeratorID:   userID,
+			TotalVolume:   0,
 			Concentartion: 0,
+			Ph:            0,
 		}
 
 		if err := tx.Create(&newCart).Error; err != nil {
@@ -243,6 +246,8 @@ func (r *Repository) CompleteCartAndCreateNew(userID uint) error {
 
 		return nil
 	})
+
+	return calculatedPH, err
 }
 
 // Упрощенный расчет pH (заглушка)

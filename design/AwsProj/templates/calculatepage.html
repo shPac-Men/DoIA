@@ -16,12 +16,12 @@
             <input type="text" 
                    placeholder="Результат" 
                    readonly
-                   value="{{if .showResult}}Рассчитанный pH: {{.calculatedPH}} при {{.temperature}}°C{{end}}"
+                   value="{{if .showResult}}pH: {{.calculatedPH}} с добавленной водой{{end}}"
                    id="resultField">
         </div>
     </header>
 
-    <!-- Поле для ввода температуры со счетчиком элементов и кнопкой заявки -->
+    <!-- Поле для ввода добавленной воды со счетчиком элементов и кнопкой заявки -->
     <div class="temperature-section">
         <div class="counter-container">
             <div class="counter">Элементов: <span id="itemsCount">{{len .data}}</span></div>
@@ -29,8 +29,8 @@
         
         <form class="temperature-form" id="temperatureForm">
             <div class="input-group">
-                <label for="temperature">Температура (°C):</label>
-                <input type="number" id="temperature" name="temperature" placeholder="25" step="0.1" min="-273" max="1000" value="{{if .temperature}}{{.temperature}}{{else}}25{{end}}">
+                <label for="added_water">Добавленная вода (мл):</label>
+                <input type="number" id="added_water" name="added_water" placeholder="100" step="1" min="0" value="{{if .added_water}}{{.added_water}}{{else}}100{{end}}">
                 <button type="button" class="btn-temperature">Применить</button>
             </div>
         </form>
@@ -38,7 +38,7 @@
         <!-- Кнопка формирования заявки -->
         <div class="request-section">
             <form method="POST" action="/create-request" id="requestForm">
-                <input type="hidden" name="temperature" id="hiddenTemperature" value="{{if .temperature}}{{.temperature}}{{else}}25{{end}}">
+                <input type="hidden" name="added_water" id="hiddenAddedWater" value="{{if .added_water}}{{.added_water}}{{else}}100{{end}}">
                 <button type="submit" class="btn calculate-btn" id="createRequestBtn" {{if not .data}}disabled{{end}}>
                     Сформировать заявку
                 </button>
@@ -75,17 +75,17 @@
     </main>
 
     <script>
-        // Обновляем скрытое поле температуры при изменении основной температуры
-        document.getElementById('temperature').addEventListener('input', function() {
-            document.getElementById('hiddenTemperature').value = this.value;
+        // Обновляем скрытое поле добавленной воды при изменении основной
+        document.getElementById('added_water').addEventListener('input', function() {
+            document.getElementById('hiddenAddedWater').value = this.value;
             document.getElementById('resultField').value = '';
         });
         
-        // Обновляем кнопку применения температуры
+        // Обновляем кнопку применения добавленной воды
         document.querySelector('.btn-temperature').addEventListener('click', function() {
-            const temperature = document.getElementById('temperature').value;
+            const addedWater = document.getElementById('added_water').value;
             document.getElementById('resultField').value = '';
-            alert('Температура применена: ' + temperature + '°C');
+            alert('Добавленная вода применена: ' + addedWater + ' мл');
         });
 
         // Показываем анимацию при отправке формы заявки

@@ -202,23 +202,31 @@ func (h *Handler) GetCartPage(ctx *gin.Context) {
 }
 
 func (h *Handler) CreateRequest(ctx *gin.Context) {
-	// Захардкоженный пользователь
 	userID := uint(1)
 
-	// Получаем температуру из формы (если нужно)
-	//temperature := ctx.PostForm("temperature")
+	// Получаем объем добавленной воды из формы
+	addedWaterStr := ctx.PostForm("added_water")
+	addedWater, err := strconv.ParseFloat(addedWaterStr, 64)
+	if err != nil {
+		addedWater = 100.0
+	}
 
-	// Завершаем текущую корзину и создаем новую
-	err := h.Repository.CompleteCartAndCreateNew(userID)
+	// Вызываем метод с двумя аргументами и получаем два значения
+	calculatedPH, err := h.Repository.CompleteCartAndCreateNew(userID, addedWater)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Перенаправляем обратно на страницу корзины
-	ctx.Redirect(http.StatusFound, "/mixingpage")
+	// Показываем результат
+	ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
+		"data":         []ds.Elements{}, // пустая корзина
+		"calculatedPH": calculatedPH,
+		"added_water":  addedWater,
+		"showResult":   true,
+		"message":      "Заявка успешно сформирована!",
+	})
 }
-
 func (h *Handler) RemoveFromCart(ctx *gin.Context) {
 	// Получаем ID элемента из формы
 	elementIDStr := ctx.PostForm("element_id")
