@@ -131,3 +131,35 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 	// после вызова сразу произойдет обновление страницы
 	ctx.Redirect(http.StatusFound, "/chemistry")
 }
+
+// deepseek
+func (h *Handler) AddToCart(ctx *gin.Context) {
+	// Получаем ID элемента из формы
+	userID := uint(1)
+	elementIDStr := ctx.PostForm("element_id")
+	elementID, err := strconv.Atoi(elementIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid element ID"})
+		return
+	}
+
+	// Получаем пользователя (предположим, что у вас есть аутентификация)
+	//userID, exists := ctx.Get("userID")
+	// if !exists {
+	// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+	// 	return
+	// }
+
+	// Объём по умолчанию (можно сделать настраиваемым)
+	volume := float32(100.0) // 100 мл по умолчанию
+
+	// Добавляем элемент в корзину
+	err = h.Repository.AddElementToCart(uint(userID), uint(elementID), volume)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Перенаправляем обратно на страницу химии или показываем сообщение об успехе
+	ctx.Redirect(http.StatusFound, "/chemistry")
+}

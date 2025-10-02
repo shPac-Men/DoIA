@@ -52,33 +52,5 @@
             {{ end }}
         </div>
     </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.card');
-            document.getElementById('itemsCount').textContent = cards.length;
-        });
-
-        document.querySelectorAll('.calculate-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const massInput = document.getElementById('mass-' + id);
-                const mass = massInput.value;
-                
-                if (!mass || mass <= 0) {
-                    alert('Пожалуйста, введите корректную массу вещества');
-                    return;
-                }
-                
-                alert(`Заявка для вещества ID: ${id} с массой: ${mass}г отправлена в обработку`);
-            });
-        });
-
-        // Обработчик для кнопки температуры (пока просто alert)
-        document.querySelector('.btn-temperature').addEventListener('click', function() {
-            const temperature = document.getElementById('temperature').value;
-            alert(`Температура установлена: ${temperature}°C (функционал в разработке)`);
-        });
-    </script>
 </body>
 </html>

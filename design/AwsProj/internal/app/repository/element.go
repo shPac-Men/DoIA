@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func (r *Repository) GetAllElements() ([]ds.Elements, error) {
@@ -19,15 +21,6 @@ func (r *Repository) GetAllElements() ([]ds.Elements, error) {
 }
 
 func (r *Repository) GetElementByID(id int) (*ds.Elements, error) {
-	// 	type Elements struct {
-	// 	ID            int    `gorm:"primaryKey"`
-	// 	IsDelete      bool   `gorm:"type:boolean not null;default:false"`
-	// 	Img           string `gorm:"type:varchar(100)"`
-	// 	Name          string `gorm:"type:varchar(25);not null"`
-	// 	Description   string `gorm:"type:varchar(100)"`
-	// 	Ph            float32
-	// 	Concentration float32
-	// }
 
 	query := "SELECT id, img, name, description, ph, Concentration FROM elements WHERE id = $1 and is_delete = false" //$1 плейсхолдер от инъекций и для Производительности - БД может кэшировать план запроса
 
@@ -53,15 +46,6 @@ func (r *Repository) GetElementByID(id int) (*ds.Elements, error) {
 
 	return elements, nil
 }
-
-// func (r *Repository) SearchElementByName(name string) ([]ds.Elements, error) {
-// 	var elements []ds.Elements
-// 	err := r.db.Where("name LIKE ? and is_delete = ?", "%"+name+"%", false).Find(&elements).Error // добавили условие
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return elements, nil
-// }
 
 func (r *Repository) SearchElementByName(name string) ([]ds.Elements, error) {
 	var elements []ds.Elements
@@ -101,4 +85,57 @@ func (r *Repository) DeleteElement(ElementID uint) error {
 	}
 
 	return nil
+}
+
+func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Ищем активную корзину (черновик) для пользователя
+		var cart ds.Mixed
+		err := tx.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
+
+		// Если корзина не найдена, создаём новую
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			moderatorID := uint(1) // ← ХАРДКОД moderator_id
+			cart = ds.Mixed{
+				Status:      "draft",
+				DateCreate:  time.Now(),
+				DateUpdate:  time.Now(),
+				CreatorID:   userID,
+				ModeratorID: moderatorID, // ← используем хардкод
+				Ph:          0,
+			}
+			if err := tx.Create(&cart).Error; err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+
+		// 2. Проверяем, не добавлен ли уже этот элемент в корзину
+		var existingElem ds.ElemMix
+		err = tx.Where("mixed_id = ? AND element_id = ?", cart.ID, elementID).First(&existingElem).Error
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Элемент ещё не в корзине - добавляем
+			elemMix := ds.ElemMix{
+				MixedID:   cart.ID,
+				ElementID: elementID,
+				Volume:    volume,
+				Comment:   "",
+			}
+			if err := tx.Create(&elemMix).Error; err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+
+		// 3. Обновляем данные mixed (дату обновления)
+		cart.DateUpdate = time.Now()
+		if err := tx.Save(&cart).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

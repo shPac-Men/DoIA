@@ -41,7 +41,7 @@ func main() {
 	err = db.AutoMigrate(
 		&ds.Elements{},
 		&ds.Mixed{},
-		&ds.Elements{},
+		&ds.ElemMix{},
 		&ds.Users{},
 	)
 	if err != nil {
