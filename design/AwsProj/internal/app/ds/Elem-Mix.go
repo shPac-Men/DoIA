@@ -10,6 +10,7 @@ type ElemMix struct {
 	Volume  float32 `gorm:"not null"` // объём в мл
 	Comment string  `gorm:"type:varchar(100)"`
 
+	IsDelete bool `gorm:"type:boolean;default:false"` // ← ДОБАВИТЬ ЭТО ПОЛЕ
 	// связи
 	Mixed   Mixed    `gorm:"foreignKey:MixedID"`
 	Element Elements `gorm:"foreignKey:ElementID"`

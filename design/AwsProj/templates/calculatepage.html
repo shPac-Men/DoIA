@@ -13,7 +13,11 @@
         </a>
 
         <div class="header-result">
-            <input type="text" placeholder="Результат" readonly>
+            <input type="text" 
+                   placeholder="Результат" 
+                   readonly
+                   value="{{if .showResult}}Рассчитанный pH: {{.calculatedPH}} при {{.temperature}}°C{{end}}"
+                   id="resultField">
         </div>
     </header>
 
@@ -26,7 +30,7 @@
         <form class="temperature-form" id="temperatureForm">
             <div class="input-group">
                 <label for="temperature">Температура (°C):</label>
-                <input type="number" id="temperature" name="temperature" placeholder="25" step="0.1" min="-273" max="1000" value="25">
+                <input type="number" id="temperature" name="temperature" placeholder="25" step="0.1" min="-273" max="1000" value="{{if .temperature}}{{.temperature}}{{else}}25{{end}}">
                 <button type="button" class="btn-temperature">Применить</button>
             </div>
         </form>
@@ -34,7 +38,7 @@
         <!-- Кнопка формирования заявки -->
         <div class="request-section">
             <form method="POST" action="/create-request" id="requestForm">
-                <input type="hidden" name="temperature" id="hiddenTemperature" value="25">
+                <input type="hidden" name="temperature" id="hiddenTemperature" value="{{if .temperature}}{{.temperature}}{{else}}25{{end}}">
                 <button type="submit" class="btn calculate-btn" id="createRequestBtn" {{if not .data}}disabled{{end}}>
                     Сформировать заявку
                 </button>
@@ -54,6 +58,12 @@
                     <label for="mass-{{ .ID }}">Объем (мл):</label>
                     <input type="number" id="mass-{{ .ID }}" class="mass-field" placeholder="{{ .Volume }}" step="0.1" min="0" value="{{ .Volume }}">
                 </div>
+
+                <!-- Кнопка удаления из корзины -->
+                <form method="POST" action="/remove-from-cart" class="remove-form">
+                    <input type="hidden" name="element_id" value="{{ .ID }}">
+                    <button type="submit" class="btn btn-remove">Удалить</button>
+                </form>
             </div>
             {{ else }}
             <div class="empty-cart">
@@ -68,13 +78,30 @@
         // Обновляем скрытое поле температуры при изменении основной температуры
         document.getElementById('temperature').addEventListener('input', function() {
             document.getElementById('hiddenTemperature').value = this.value;
+            document.getElementById('resultField').value = '';
         });
         
         // Обновляем кнопку применения температуры
         document.querySelector('.btn-temperature').addEventListener('click', function() {
             const temperature = document.getElementById('temperature').value;
+            document.getElementById('resultField').value = '';
             alert('Температура применена: ' + temperature + '°C');
-            // Здесь можно добавить логику применения температуры
+        });
+
+        // Показываем анимацию при отправке формы заявки
+        document.getElementById('requestForm').addEventListener('submit', function() {
+            const btn = document.getElementById('createRequestBtn');
+            btn.disabled = true;
+            btn.textContent = 'Расчет...';
+        });
+
+        // Подтверждение удаления
+        document.querySelectorAll('.remove-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                if (!confirm('Удалить этот элемент из корзины?')) {
+                    e.preventDefault();
+                }
+            });
         });
     </script>
 </body>

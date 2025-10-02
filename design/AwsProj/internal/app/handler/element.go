@@ -218,3 +218,26 @@ func (h *Handler) CreateRequest(ctx *gin.Context) {
 	// Перенаправляем обратно на страницу корзины
 	ctx.Redirect(http.StatusFound, "/mixingpage")
 }
+
+func (h *Handler) RemoveFromCart(ctx *gin.Context) {
+	// Получаем ID элемента из формы
+	elementIDStr := ctx.PostForm("element_id")
+	elementID, err := strconv.Atoi(elementIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid element ID"})
+		return
+	}
+
+	// Захардкоженный пользователь
+	userID := uint(1)
+
+	// Удаляем элемент из корзины
+	err = h.Repository.RemoveFromCart(userID, uint(elementID))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Перенаправляем обратно на страницу корзины
+	ctx.Redirect(http.StatusFound, "/mixingpage")
+}

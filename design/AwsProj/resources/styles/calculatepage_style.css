@@ -303,6 +303,26 @@ main {
     opacity: 0.6;
 }
 
+/* Добавьте в calculatepage_style.css */
+.btn-remove {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.btn-remove:hover {
+    background-color: #cc0000;
+}
+
+.remove-form {
+    margin-top: 10px;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .temperature-section {

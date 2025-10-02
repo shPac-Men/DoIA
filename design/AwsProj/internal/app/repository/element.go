@@ -95,14 +95,14 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 
 		// Если корзина не найдена, создаём новую
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			moderatorID := uint(1) // ← ХАРДКОД moderator_id
 			cart = ds.Mixed{
-				Status:      "draft",
-				DateCreate:  time.Now(),
-				DateUpdate:  time.Now(),
-				CreatorID:   userID,
-				ModeratorID: moderatorID, // ← используем хардкод
-				Ph:          0,
+				Status:        "draft",
+				DateCreate:    time.Now(),
+				DateUpdate:    time.Now(),
+				CreatorID:     userID,
+				ModeratorID:   userID,
+				Concentartion: 0,
+				Ph:            0,
 			}
 			if err := tx.Create(&cart).Error; err != nil {
 				return err
@@ -111,23 +111,40 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 			return err
 		}
 
-		// 2. Проверяем, не добавлен ли уже этот элемент в корзину
+		// 2. Проверяем, есть ли уже этот элемент в корзине (включая удаленные)
 		var existingElem ds.ElemMix
-		err = tx.Where("mixed_id = ? AND element_id = ?", cart.ID, elementID).First(&existingElem).Error
+		err = tx.Unscoped().Where("mixed_id = ? AND element_id = ?", cart.ID, elementID).First(&existingElem).Error
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Элемент ещё не в корзине - добавляем
+			// Элемент ещё не в корзине - добавляем новый
 			elemMix := ds.ElemMix{
 				MixedID:   cart.ID,
 				ElementID: elementID,
 				Volume:    volume,
 				Comment:   "",
+				IsDelete:  false, // явно указываем false
 			}
 			if err := tx.Create(&elemMix).Error; err != nil {
 				return err
 			}
 		} else if err != nil {
 			return err
+		} else {
+			// Элемент уже существует в корзине (возможно удаленный)
+			if existingElem.IsDelete {
+				// Восстанавливаем удаленный элемент
+				existingElem.IsDelete = false
+				existingElem.Volume = volume // обновляем объем на новый
+				existingElem.Comment = ""    // сбрасываем комментарий
+			} else {
+				// Элемент уже активен в корзине - можно обновить объем или оставить как есть
+				// existingElem.Volume += volume // если хотим суммировать объемы
+				// existingElem.Volume = volume  // если хотим заменить объем
+			}
+
+			if err := tx.Save(&existingElem).Error; err != nil {
+				return err
+			}
 		}
 
 		// 3. Обновляем данные mixed (дату обновления)
@@ -140,6 +157,27 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 	})
 }
 
+// func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
+// 	// Ищем корзину пользователя
+// 	var cart ds.Mixed
+// 	err := r.db.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
+// 	if err != nil {
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			return nil, nil, nil // Корзина не существует
+// 		}
+// 		return nil, nil, err
+// 	}
+
+// 	// Получаем элементы корзины с информацией о элементах
+// 	var cartItems []ds.ElemMix
+// 	err = r.db.Preload("Element").Where("mixed_id = ?", cart.ID).Find(&cartItems).Error
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	return &cart, cartItems, nil
+// }
+
 func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
 	// Ищем корзину пользователя
 	var cart ds.Mixed
@@ -151,9 +189,11 @@ func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
 		return nil, nil, err
 	}
 
-	// Получаем элементы корзины с информацией о элементах
+	// Получаем элементы корзины (только не удаленные)
 	var cartItems []ds.ElemMix
-	err = r.db.Preload("Element").Where("mixed_id = ?", cart.ID).Find(&cartItems).Error
+	err = r.db.Preload("Element").
+		Where("mixed_id = ? AND is_delete = ?", cart.ID, false).
+		Find(&cartItems).Error
 	if err != nil {
 		return nil, nil, err
 	}
@@ -224,4 +264,37 @@ func (r *Repository) CalculatePH(mixedID uint) float32 {
 	}
 
 	return totalPH / float32(len(elemMixes))
+}
+
+func (r *Repository) RemoveFromCart(userID, elementID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Находим активную корзину пользователя
+		var cart ds.Mixed
+		err := tx.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
+		if err != nil {
+			return err
+		}
+
+		// 2. Помечаем элемент как удаленный (soft delete)
+		result := tx.Model(&ds.ElemMix{}).
+			Where("mixed_id = ? AND element_id = ?", cart.ID, elementID).
+			Update("is_delete", true)
+
+		if result.Error != nil {
+			return result.Error
+		}
+
+		// 3. Если элемент не был найден
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("элемент не найден в корзине")
+		}
+
+		// 4. Обновляем дату изменения корзины
+		cart.DateUpdate = time.Now()
+		if err := tx.Save(&cart).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
