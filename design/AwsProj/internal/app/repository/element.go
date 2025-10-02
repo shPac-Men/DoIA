@@ -139,3 +139,89 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 		return nil
 	})
 }
+
+func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
+	// Ищем корзину пользователя
+	var cart ds.Mixed
+	err := r.db.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, nil // Корзина не существует
+		}
+		return nil, nil, err
+	}
+
+	// Получаем элементы корзины с информацией о элементах
+	var cartItems []ds.ElemMix
+	err = r.db.Preload("Element").Where("mixed_id = ?", cart.ID).Find(&cartItems).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &cart, cartItems, nil
+}
+
+func (r *Repository) CompleteCartAndCreateNew(userID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Находим активную корзину (draft)
+		var cart ds.Mixed
+		err := tx.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("корзина не найдена")
+			}
+			return err
+		}
+
+		// 2. Рассчитываем pH (упрощенная логика)
+		calculatedPH := r.CalculatePH(cart.ID)
+
+		// 3. Обновляем корзину: меняем статус и записываем pH
+		cart.Status = "completed"
+		cart.Ph = calculatedPH
+		cart.DateUpdate = time.Now()
+		cart.DateFinish = sql.NullTime{Time: time.Now(), Valid: true}
+
+		if err := tx.Save(&cart).Error; err != nil {
+			return err
+		}
+
+		// 4. Создаем новую корзину (draft)
+		newCart := ds.Mixed{
+			Status:        "draft",
+			DateCreate:    time.Now(),
+			DateUpdate:    time.Now(),
+			CreatorID:     userID,
+			ModeratorID:   userID, // или можно использовать хардкод 1
+			Ph:            0,
+			Concentartion: 0,
+		}
+
+		if err := tx.Create(&newCart).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// Упрощенный расчет pH (заглушка)
+func (r *Repository) CalculatePH(mixedID uint) float32 {
+	// Здесь может быть сложная логика расчета pH на основе элементов
+	// Пока просто возвращаем случайное значение или фиксированное
+
+	// Пример: получаем элементы корзины и рассчитываем средний pH
+	var elemMixes []ds.ElemMix
+	err := r.db.Preload("Element").Where("mixed_id = ?", mixedID).Find(&elemMixes).Error
+	if err != nil || len(elemMixes) == 0 {
+		return 7.0 // нейтральный pH по умолчанию
+	}
+
+	// Простой расчет: среднее значение pH элементов
+	var totalPH float32
+	for _, elem := range elemMixes {
+		totalPH += elem.Element.Ph
+	}
+
+	return totalPH / float32(len(elemMixes))
+}

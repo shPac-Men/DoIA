@@ -177,6 +177,16 @@ header {
     box-shadow: 0 6px 14px rgba(0,0,0,0.3);
 }
 
+.empty-cart {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.empty-cart p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
 /* Main content */
 main {
     padding: 30px 20px;
@@ -271,6 +281,26 @@ main {
 .btn:hover {
     background: #f1f1f1;
     box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+}
+
+.horizontal-layout {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.horizontal-layout .counter-container,
+.horizontal-layout .temperature-form,
+.horizontal-layout .request-section {
+    flex: 1;
+    min-width: 200px;
+}
+
+#createRequestBtn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 /* Адаптивность */

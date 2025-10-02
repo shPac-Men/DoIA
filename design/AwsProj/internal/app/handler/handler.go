@@ -24,6 +24,8 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.POST("/element/delete", h.DeleteElement) //нахуй
 	//router.GET("/mixingpage", h.CalculatePage) потом реализовать
 	router.POST("/element/add-to-cart", h.AddToCart)
+	router.GET("/mixingpage", h.GetCartPage)
+	router.POST("/create-request", h.CreateRequest)
 }
 
 // RegisterStatic То же самое, что и с маршрутами, регистрируем статику

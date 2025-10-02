@@ -163,3 +163,58 @@ func (h *Handler) AddToCart(ctx *gin.Context) {
 	// Перенаправляем обратно на страницу химии или показываем сообщение об успехе
 	ctx.Redirect(http.StatusFound, "/chemistry")
 }
+
+func (h *Handler) GetCartPage(ctx *gin.Context) {
+	// Захардкоженный пользователь
+	userID := uint(1)
+
+	// Получаем корзину и элементы
+	cart, cartItems, err := h.Repository.GetUserCart(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Если корзины нет или она пустая
+	if cart == nil || len(cartItems) == 0 {
+		ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
+			"data": []ds.Elements{},
+		})
+		return
+	}
+
+	// Преобразуем элементы корзины в формат для шаблона
+	var elements []gin.H
+	for _, item := range cartItems {
+		elements = append(elements, gin.H{
+			"ID":            item.Element.ID,
+			"Title":         item.Element.Name,
+			"Image":         item.Element.Img,
+			"PH":            item.Element.Ph,
+			"Concentration": item.Element.Concentration,
+			"Volume":        item.Volume, // Добавляем объем из корзины
+		})
+	}
+
+	ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
+		"data": elements,
+	})
+}
+
+func (h *Handler) CreateRequest(ctx *gin.Context) {
+	// Захардкоженный пользователь
+	userID := uint(1)
+
+	// Получаем температуру из формы (если нужно)
+	//temperature := ctx.PostForm("temperature")
+
+	// Завершаем текущую корзину и создаем новую
+	err := h.Repository.CompleteCartAndCreateNew(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Перенаправляем обратно на страницу корзины
+	ctx.Redirect(http.StatusFound, "/mixingpage")
+}
