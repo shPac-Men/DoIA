@@ -24,7 +24,7 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 	var elements []ds.Elements
 	var err error
 
-	search := ctx.Query("query") // исправьте на "query" как в шаблоне
+	search := ctx.Query("query") // получаем "query" из URL
 	if search == "" {
 		elements, err = h.Repository.GetAllElements()
 	} else {
@@ -37,13 +37,12 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 		return
 	}
 
-	// Преобразуем элементы в DTO для шаблона
 	var viewElements []ElementView
 	for _, elem := range elements {
 		viewElements = append(viewElements, ElementView{
 			ID:            elem.ID,
-			Image:         elem.Imgage, // Img → Image для шаблона
-			Title:         elem.Name,   // Name → Title для шаблона
+			Image:         elem.Img,
+			Title:         elem.Name,
 			Concentration: formatConcentration(elem.Concentration),
 			PH:            formatPH(elem.Ph),
 		})
@@ -52,7 +51,7 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "index.html", gin.H{
 		"data":       viewElements,
 		"cart_count": h.Repository.GetCartCount(),
-		"query":      search, // исправьте на "query" как в шаблоне
+		"query":      search, // ← ИСПРАВИТЬ: должно быть "query" (как в шаблоне)
 	})
 }
 
@@ -130,5 +129,5 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 	}
 
 	// после вызова сразу произойдет обновление страницы
-	ctx.Redirect(http.StatusFound, "/element")
+	ctx.Redirect(http.StatusFound, "/chemistry")
 }

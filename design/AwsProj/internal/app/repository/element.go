@@ -37,7 +37,7 @@ func (r *Repository) GetElementByID(id int) (*ds.Elements, error) {
 
 	err := row.Scan(
 		&elements.ID,
-		&elements.Imgage,
+		&elements.Img,
 		&elements.Name,
 		&elements.Description,
 		&elements.Ph,
@@ -54,9 +54,19 @@ func (r *Repository) GetElementByID(id int) (*ds.Elements, error) {
 	return elements, nil
 }
 
+// func (r *Repository) SearchElementByName(name string) ([]ds.Elements, error) {
+// 	var elements []ds.Elements
+// 	err := r.db.Where("name LIKE ? and is_delete = ?", "%"+name+"%", false).Find(&elements).Error // добавили условие
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return elements, nil
+// }
+
 func (r *Repository) SearchElementByName(name string) ([]ds.Elements, error) {
 	var elements []ds.Elements
-	err := r.db.Where("name LIKE ? and is_delete = ?", "%"+name+"%", false).Find(&elements).Error // добавили условие
+	// ILIKE - case-insensitive LIKE (только в PostgreSQL)
+	err := r.db.Where("name ILIKE ? and is_delete = ?", "%"+name+"%", false).Find(&elements).Error
 	if err != nil {
 		return nil, err
 	}

@@ -35,6 +35,10 @@
                 <p><strong>Концентрация:</strong> {{ .Concentration }}</p>
                 <p><strong>pH:</strong> {{ .PH }}</p>
                 <a href="/element/{{ .ID }}" class="btn">Подробнее</a>
+                <form method="POST" action="/element/delete" style="display:inline;">
+                <input type="hidden" name="element_id" value="{{ .ID }}">
+                <button type="submit" class="btn btn-delete">Удалить</button>
+            </form>
             </div>
             {{ end }}
         </div>

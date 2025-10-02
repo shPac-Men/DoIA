@@ -21,7 +21,7 @@ func NewHandler(r *repository.Repository) *Handler {
 func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.GET("/chemistry", h.GetAllElements)
 	router.GET("/elements/:id", h.GetElementById)
-	//router.POST("/delete-chat", h.DeleteChat) нахуй
+	router.POST("/element/delete", h.DeleteElement) //нахуй
 	//router.GET("/mixingpage", h.CalculatePage) потом реализовать
 }
 
