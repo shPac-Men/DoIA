@@ -133,7 +133,7 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 }
 
 // deepseek
-func (h *Handler) AddToCart(ctx *gin.Context) {
+func (h *Handler) AddToMixing(ctx *gin.Context) {
 	// Получаем ID элемента из формы
 	userID := uint(1)
 	elementIDStr := ctx.PostForm("element_id")
@@ -164,7 +164,7 @@ func (h *Handler) AddToCart(ctx *gin.Context) {
 	ctx.Redirect(http.StatusFound, "/chemistry")
 }
 
-func (h *Handler) GetCartPage(ctx *gin.Context) {
+func (h *Handler) GetMixingPage(ctx *gin.Context) {
 	// Захардкоженный пользователь
 	userID := uint(1)
 
@@ -201,7 +201,7 @@ func (h *Handler) GetCartPage(ctx *gin.Context) {
 	})
 }
 
-func (h *Handler) CreateRequest(ctx *gin.Context) {
+func (h *Handler) CreateMixing(ctx *gin.Context) {
 	userID := uint(1)
 
 	// Получаем объем добавленной воды из формы
@@ -227,7 +227,7 @@ func (h *Handler) CreateRequest(ctx *gin.Context) {
 		"message":      "Заявка успешно сформирована!",
 	})
 }
-func (h *Handler) RemoveFromCart(ctx *gin.Context) {
+func (h *Handler) RemoveFromMixing(ctx *gin.Context) {
 	// Получаем ID элемента из формы
 	elementIDStr := ctx.PostForm("element_id")
 	elementID, err := strconv.Atoi(elementIDStr)

@@ -23,11 +23,11 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.GET("/element/:id", h.GetElementById)
 	router.POST("/element/delete", h.DeleteElement) //нахуй
 	//router.GET("/mixingpage", h.CalculatePage) потом реализовать
-	router.POST("/element/add-to-cart", h.AddToCart)
-	router.GET("/mixingpage", h.GetCartPage)
-	router.POST("/create-request", h.CreateRequest)
+	router.POST("/element/add-to-mixing", h.AddToMixing)
+	router.GET("/mixingpage", h.GetMixingPage)
+	router.POST("/create-mixing", h.CreateMixing)
 	// В вашем router setup
-	router.POST("/remove-from-cart", h.RemoveFromCart)
+	router.POST("/remove-from-mixing", h.RemoveFromMixing)
 }
 
 // RegisterStatic То же самое, что и с маршрутами, регистрируем статику

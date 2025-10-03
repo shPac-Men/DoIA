@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metoda - Расчет веществ</title>
+    <title>chemistry - Расчет веществ</title>
     <link rel="stylesheet" href="/static/styles/calculatepage_style.css">
 </head>
 <body>
@@ -60,7 +60,7 @@
                 </div>
 
                 <!-- Кнопка удаления из корзины -->
-                <form method="POST" action="/remove-from-cart" class="remove-form">
+                <form method="POST" action="/remove-from-mixing" class="remove-form">
                     <input type="hidden" name="element_id" value="{{ .ID }}">
                     <button type="submit" class="btn btn-remove">Удалить</button>
                 </form>

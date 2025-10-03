@@ -1,6 +1,6 @@
 <html lang="en">
 <head>
-    <title>Metoda</title>
+    <title>chemistry</title>
     <link rel="stylesheet" href="/static/styles/index_style.css">
 </head>
 <body>
@@ -36,7 +36,7 @@
                 <p><strong>Концентрация:</strong> {{ .Concentration }}</p>
                 <p><strong>pH:</strong> {{ .PH }}</p>
                 <a href="/element/{{ .ID }}" class="btn">Подробнее</a>
-                <form method="POST" action="/element/add-to-cart" style="display:inline;">
+                <form method="POST" action="/element/add-to-mixing" style="display:inline;">
                     <input type="hidden" name="element_id" value="{{ .ID }}">
                     <button type="submit" class="btn btn-cart">В корзину</button>
                 </form>
