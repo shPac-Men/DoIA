@@ -11,14 +11,6 @@
         <a href="/chemistry" class="home-link">
             <img src="http://localhost:9000/staticimages/image.svg" alt="На главную">
         </a>
-
-        <div class="header-result">
-            <input type="text" 
-                   placeholder="Результат" 
-                   readonly
-                   value="{{if .showResult}}pH: {{.calculatedPH}} с добавленной водой{{end}}"
-                   id="resultField">
-        </div>
     </header>
 
     <!-- Поле для ввода добавленной воды с кнопкой заявки -->
@@ -31,15 +23,22 @@
             </div>
         </form>
 
-        <!-- Кнопка формирования заявки -->
-        <div class="request-section">
-            <form method="POST" action="/create-request" id="requestForm">
-                <input type="hidden" name="added_water" id="hiddenAddedWater" value="{{if .added_water}}{{.added_water}}{{else}}100{{end}}">
-                <button type="submit" class="btn calculate-btn" id="createRequestBtn" {{if not .data}}disabled{{end}}>
-                    Рассчитать
-                </button>
-            </form>
+        <!-- Результат между "Добавить" и "Рассчитать" -->
+        <div class="result-display">
+            <input type="text" 
+                   placeholder="Результат" 
+                   readonly
+                   value="{{if .showResult}}pH: {{.calculatedPH}} с добавленной водой{{end}}"
+                   id="resultField">
         </div>
+
+        <!-- Кнопка расчета -->
+        <form method="POST" action="/create-request" id="requestForm">
+            <input type="hidden" name="added_water" id="hiddenAddedWater" value="{{if .added_water}}{{.added_water}}{{else}}100{{end}}">
+            <button type="submit" class="btn calculate-btn" id="createRequestBtn" {{if not .data}}disabled{{end}}>
+                Рассчитать
+            </button>
+        </form>
     </div>
 
     <main>
@@ -49,9 +48,9 @@
                 <div class="card-content">
                     <div class="card-column">
                         <img src="{{ .Image }}" alt="{{ .Title }}" class="card-img">
-                        <h3>{{ .Title }}</h3>
                     </div>
                     <div class="card-column">
+                        <h3>{{ .Title }}</h3>
                         <div class="info-item">
                             <strong>pH:</strong> {{ .PH }}
                         </div>
