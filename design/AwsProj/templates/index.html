@@ -1,4 +1,5 @@
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
     <title>chemistry</title>
     <link rel="stylesheet" href="/static/styles/index_style.css">
@@ -10,15 +11,16 @@
             <h1>
                 <a href="/chemistry"><img src="http://localhost:9000/staticimages/image.svg" alt="home"></a>
             </h1>
-            <a href="/mixingpage" class="cart">
-                <img src="http://localhost:9000/staticimages/breaker.svg" alt="cart">
-                {{if .cartCount}}<span class="cart-count">{{.cartCount}}</span>{{end}}
-            </a>
         </header>
     </section>
 
-    <!-- Поиск под хедером -->
+    <!-- Поиск и корзина в одной строке -->
     <div class="search-section">
+        <a href="/mixingpage" class="cart-link">
+            <img src="http://localhost:9000/staticimages/breaker.svg" alt="cart">
+            {{if .cart_count}}<span class="cart-count">{{.cart_count}}</span>{{end}}
+        </a>
+        
         <form action="/chemistry" method="GET">
             <input type="text" name="query" placeholder="Введите запрос" value="{{ .query }}">
             <button type="submit">Найти</button>

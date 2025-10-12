@@ -21,17 +21,13 @@
         </div>
     </header>
 
-    <!-- Поле для ввода добавленной воды со счетчиком элементов и кнопкой заявки -->
+    <!-- Поле для ввода добавленной воды с кнопкой заявки -->
     <div class="temperature-section">
-        <div class="counter-container">
-            <div class="counter">Элементов: <span id="itemsCount">{{len .data}}</span></div>
-        </div>
-        
         <form class="temperature-form" id="temperatureForm">
             <div class="input-group">
                 <label for="added_water">Добавленная вода (мл):</label>
                 <input type="number" id="added_water" name="added_water" placeholder="100" step="1" min="0" value="{{if .added_water}}{{.added_water}}{{else}}100{{end}}">
-                <button type="button" class="btn-temperature">Применить</button>
+                <button type="button" class="btn-temperature">Добавить</button>
             </div>
         </form>
 
@@ -40,7 +36,7 @@
             <form method="POST" action="/create-request" id="requestForm">
                 <input type="hidden" name="added_water" id="hiddenAddedWater" value="{{if .added_water}}{{.added_water}}{{else}}100{{end}}">
                 <button type="submit" class="btn calculate-btn" id="createRequestBtn" {{if not .data}}disabled{{end}}>
-                    Сформировать заявку
+                    Рассчитать
                 </button>
             </form>
         </div>
@@ -50,20 +46,34 @@
         <div class="cards-container">
             {{ range .data }}
             <div class="card">
-                <img src="{{ .Image }}" alt="{{ .Title }}" class="card-img">
-                <h3>{{ .Title }}</h3>
-                <p><strong>pH:</strong> {{ .PH }} при {{ .Concentration }} 25°C</p>
-                
-                <div class="mass-input">
-                    <label for="mass-{{ .ID }}">Объем (мл):</label>
-                    <input type="number" id="mass-{{ .ID }}" class="mass-field" placeholder="{{ .Volume }}" step="0.1" min="0" value="{{ .Volume }}">
+                <div class="card-content">
+                    <div class="card-column">
+                        <img src="{{ .Image }}" alt="{{ .Title }}" class="card-img">
+                        <h3>{{ .Title }}</h3>
+                    </div>
+                    <div class="card-column">
+                        <div class="info-item">
+                            <strong>pH:</strong> {{ .PH }}
+                        </div>
+                        <div class="info-item">
+                            <strong>Концентрация:</strong> {{ .Concentration }}
+                        </div>
+                        <div class="info-item">
+                            <strong>Температура:</strong> 25°C
+                        </div>
+                    </div>
+                    <div class="card-column">
+                        <div class="mass-input">
+                            <label for="mass-{{ .ID }}">Объем (мл):</label>
+                            <input type="number" id="mass-{{ .ID }}" class="mass-field" placeholder="{{ .Volume }}" step="0.1" min="0" value="{{ .Volume }}">
+                        </div>
+                        <!-- Кнопка удаления из корзины -->
+                        <form method="POST" action="/remove-from-mixing" class="remove-form">
+                            <input type="hidden" name="element_id" value="{{ .ID }}">
+                            <button type="submit" class="btn btn-remove">Удалить</button>
+                        </form>
+                    </div>
                 </div>
-
-                <!-- Кнопка удаления из корзины -->
-                <form method="POST" action="/remove-from-mixing" class="remove-form">
-                    <input type="hidden" name="element_id" value="{{ .ID }}">
-                    <button type="submit" class="btn btn-remove">Удалить</button>
-                </form>
             </div>
             {{ else }}
             <div class="empty-cart">

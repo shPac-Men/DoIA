@@ -64,32 +64,6 @@ func formatPH(ph float32) string {
 	return fmt.Sprintf("%.1f", ph)
 }
 
-// func (h *Handler) GetAllElements(ctx *gin.Context) {
-// 	var elements []ds.Elements
-// 	var err error
-
-// 	search := ctx.Query("search")
-// 	if search == "" {
-// 		elements, err = h.Repository.GetAllElements()
-// 	} else {
-// 		elements, err = h.Repository.SearchElementByName(search)
-// 	}
-
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{
-// 			"error": err.Error(),
-// 		})
-// 		logrus.Error(err)
-// 		return
-// 	}
-
-// 	ctx.HTML(http.StatusOK, "index.html", gin.H{
-// 		"data":       elements,
-// 		"cart_count": h.Repository.GetCartCount(),
-// 		"search":     search,
-// 	})
-// }
-
 func (h *Handler) GetElementById(ctx *gin.Context) {
 	strId := ctx.Param("id")
 	id, err := strconv.Atoi(strId)

@@ -21,11 +21,11 @@ func NewHandler(r *repository.Repository) *Handler {
 func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.GET("/chemistry", h.GetAllElements)
 	router.GET("/element/:id", h.GetElementById)
-	router.POST("/element/delete", h.DeleteElement) //нахуй
+	router.POST("/element/delete", h.DeleteElement) //удалить потом ибо не нужно, но проверить
 	//router.GET("/mixingpage", h.CalculatePage) потом реализовать
 	router.POST("/element/add-to-mixing", h.AddToMixing)
 	router.GET("/mixingpage", h.GetMixingPage)
-	router.POST("/create-mixing", h.CreateMixing)
+	router.POST("/create-mixing", h.CreateMixing) //обединить с 4
 	// В вашем router setup
 	router.POST("/remove-from-mixing", h.RemoveFromMixing)
 }

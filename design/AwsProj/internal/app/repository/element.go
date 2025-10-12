@@ -64,7 +64,7 @@ func (r *Repository) GetCartCount() int64 {
 	creatorID := 1
 	// пока что мы захардкодили id создателя заявки, в последующем вы сделаете авторизацию и будете получать его из JWT
 
-	err := r.db.Model(&ds.Mixed{}).Where("creator_id = ? AND status = ?", creatorID, "черновик").Select("id").First(&mixedID).Error
+	err := r.db.Model(&ds.Mixed{}).Where("creator_id = ? AND status = ?", creatorID, "draft").Select("id").First(&mixedID).Error
 	if err != nil {
 		return 0
 	}
@@ -156,27 +156,6 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 		return nil
 	})
 }
-
-// func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
-// 	// Ищем корзину пользователя
-// 	var cart ds.Mixed
-// 	err := r.db.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
-// 	if err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return nil, nil, nil // Корзина не существует
-// 		}
-// 		return nil, nil, err
-// 	}
-
-// 	// Получаем элементы корзины с информацией о элементах
-// 	var cartItems []ds.ElemMix
-// 	err = r.db.Preload("Element").Where("mixed_id = ?", cart.ID).Find(&cartItems).Error
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-
-// 	return &cart, cartItems, nil
-// }
 
 func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
 	// Ищем корзину пользователя
