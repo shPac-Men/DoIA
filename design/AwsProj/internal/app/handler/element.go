@@ -265,33 +265,6 @@ func (h *Handler) GetMixingPage(ctx *gin.Context) {
 	})
 }
 
-// func (h *Handler) CreateMixing(ctx *gin.Context) {
-// 	userID := uint(1)
-
-// 	// Получаем объем добавленной воды из формы
-// 	addedWaterStr := ctx.PostForm("added_water")
-// 	addedWater, err := strconv.ParseFloat(addedWaterStr, 64)
-// 	if err != nil {
-// 		addedWater = 100.0
-// 	}
-
-// 	// Вызываем метод с двумя аргументами и получаем два значения
-// 	calculatedPH, err := h.Repository.CompleteCartAndCreateNew(userID, addedWater)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	// Показываем результат
-// 	ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
-// 		"data":         []ds.Elements{}, // пустая корзина
-// 		"calculatedPH": calculatedPH,
-// 		"added_water":  addedWater,
-// 		"showResult":   true,
-// 		"message":      "Заявка успешно сформирована!",
-// 	})
-// }
-
 func (h *Handler) CreateMixing(ctx *gin.Context) {
 	// 1. Получаем данные из JSON тела запроса
 	var request struct {
