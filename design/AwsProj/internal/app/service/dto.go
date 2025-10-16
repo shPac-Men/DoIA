@@ -66,3 +66,28 @@ type ElementResponse struct {
 	Image         string  `json:"image"`
 	Message       string  `json:"message"`
 }
+
+// удаление
+type DeleteElementResponse struct {
+	ID      int    `json:"id"`
+	Message string `json:"message"`
+}
+
+type AddToMixingRequest struct {
+	ElementID int     `json:"element_id" binding:"required"`
+	Volume    float32 `json:"volume,omitempty"`
+}
+
+// AddToMixingResponse DTO для ответа
+type AddToMixingResponse struct {
+	ElementID int     `json:"element_id"`
+	Volume    float32 `json:"volume"`
+	UserID    uint    `json:"user_id"`
+	Message   string  `json:"message"`
+}
+
+type UploadImageResponse struct {
+	ID      int    `json:"id"`
+	Image   string `json:"image"`
+	Message string `json:"message"`
+}

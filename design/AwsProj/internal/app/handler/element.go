@@ -144,73 +144,54 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 	})
 }
 
-func (h *Handler) DeleteElement(ctx *gin.Context) {
-	// считываем значение из формы, которую мы добавим в наш шаблон
-	strId := ctx.PostForm("element_id")
-	id, err := strconv.Atoi(strId)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-	}
-	// Вызов функции добавления чата в заявку
-	err = h.Repository.DeleteElement(uint(id))
-	if err != nil && !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-		return
-	}
-
-	// после вызова сразу произойдет обновление страницы
-	ctx.Redirect(http.StatusFound, "/chemistry")
-}
-
 // deepseek
-func (h *Handler) AddToMixing(ctx *gin.Context) {
-	// 1. Получаем ID элемента из JSON тела запроса
-	var request struct {
-		ElementID int     `json:"element_id" binding:"required"`
-		Volume    float32 `json:"volume,omitempty"` // опционально
-	}
+// func (h *Handler) AddToMixing(ctx *gin.Context) {
+// 	// 1. Получаем ID элемента из JSON тела запроса
+// 	var request struct {
+// 		ElementID int     `json:"element_id" binding:"required"`
+// 		Volume    float32 `json:"volume,omitempty"` // опционально
+// 	}
 
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid request data",
-			"message": err.Error(),
-		})
-		return
-	}
+// 	if err := ctx.ShouldBindJSON(&request); err != nil {
+// 		ctx.JSON(http.StatusBadRequest, gin.H{
+// 			"success": false,
+// 			"error":   "Invalid request data",
+// 			"message": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	// 2. Получаем ID пользователя (пока хардкод, потом через аутентификацию)
-	userID := uint(1)
+// 	// 2. Получаем ID пользователя (пока хардкод, потом через аутентификацию)
+// 	userID := uint(1)
 
-	// 3. Объём по умолчанию
-	volume := request.Volume
-	if volume == 0 {
-		volume = 100.0 // значение по умолчанию
-	}
+// 	// 3. Объём по умолчанию
+// 	volume := request.Volume
+// 	if volume == 0 {
+// 		volume = 100.0 // значение по умолчанию
+// 	}
 
-	// 4. Добавляем элемент в корзину
-	err := h.Repository.AddElementToCart(userID, uint(request.ElementID), volume)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to add element to mixing",
-			"message": err.Error(),
-		})
-		return
-	}
+// 	// 4. Добавляем элемент в корзину
+// 	err := h.Repository.AddElementToCart(userID, uint(request.ElementID), volume)
+// 	if err != nil {
+// 		ctx.JSON(http.StatusInternalServerError, gin.H{
+// 			"success": false,
+// 			"error":   "Failed to add element to mixing",
+// 			"message": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	// 5. Возвращаем JSON ответ вместо редиректа
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Element added to mixing successfully",
-		"data": gin.H{
-			"element_id": request.ElementID,
-			"volume":     volume,
-			"user_id":    userID,
-		},
-	})
-}
+// 	// 5. Возвращаем JSON ответ вместо редиректа
+// 	ctx.JSON(http.StatusOK, gin.H{
+// 		"success": true,
+// 		"message": "Element added to mixing successfully",
+// 		"data": gin.H{
+// 			"element_id": request.ElementID,
+// 			"volume":     volume,
+// 			"user_id":    userID,
+// 		},
+// 	})
+// }
 
 // internal/app/handler/element.go
 func (h *Handler) GetMixingPage(ctx *gin.Context) {
@@ -337,6 +318,94 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 		ctx.JSON(statusCode, gin.H{
 			"success": false,
 			"error":   "Ошибка обновления элемента",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Успешный ответ
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": result.Message,
+		"data":    result,
+	})
+}
+
+func (h *Handler) DeleteElement(ctx *gin.Context) {
+	// Получаем ID из URL
+	strID := ctx.Param("id")
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Неверный ID элемента",
+			"message": "ID должен быть числом",
+		})
+		return
+	}
+
+	// Вызов сервиса
+	result, err := h.ElementService.DeleteElement(id)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "не найден") {
+			statusCode = http.StatusNotFound
+		}
+
+		ctx.JSON(statusCode, gin.H{
+			"success": false,
+			"error":   "Ошибка удаления элемента",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Успешный ответ
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": result.Message,
+		"data":    result,
+	})
+}
+
+func (h *Handler) UploadImage(ctx *gin.Context) {
+	// Получаем ID элемента
+	strID := ctx.Param("id")
+	elementID, err := strconv.Atoi(strID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Неверный ID элемента",
+			"message": "ID должен быть числом",
+		})
+		return
+	}
+
+	// Получаем файл из формы
+	fileHeader, err := ctx.FormFile("image")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Файл не найден",
+			"message": "Необходимо загрузить изображение",
+		})
+		return
+	}
+
+	// Вызов сервиса
+	result, err := h.ElementService.UploadImage(elementID, fileHeader)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "не найден") {
+			statusCode = http.StatusNotFound
+		} else if strings.Contains(err.Error(), "размер") ||
+			strings.Contains(err.Error(), "поддерживаются") {
+			statusCode = http.StatusBadRequest
+		}
+
+		ctx.JSON(statusCode, gin.H{
+			"success": false,
+			"error":   "Ошибка загрузки изображения",
 			"message": err.Error(),
 		})
 		return

@@ -45,3 +45,9 @@ type UpdateElementResponse struct {
 	Image         string  `json:"image"`
 	Message       string  `json:"message"`
 }
+
+type UploadImageResponse struct {
+	ID      int    `json:"id"`
+	Image   string `json:"image"`
+	Message string `json:"message"`
+}

@@ -33,7 +33,16 @@ func main() {
 
 	// СОЗДАЕМ MIXING SERVICE
 	mixingService := service.NewMixingService(rep)
-	elementService := service.NewElementService(rep)
+	elementService, err := service.NewElementService(
+		rep,
+		"localhost:9000", // MinIO endpoint
+		"admin",          // MinIO access key
+		"admin123456",    // MinIO secret key
+		"staticimages",   // bucket name
+	)
+	if err != nil {
+		logrus.Fatalf("error initializing element service: %v", err)
+	}
 	// ПЕРЕДАЕМ И REP И MIXING SERVICE
 	hand := handler.NewHandler(rep, mixingService, elementService)
 

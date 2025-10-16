@@ -22,19 +22,38 @@ func NewHandler(r *repository.Repository, s *service.MixingService, e *service.E
 	}
 }
 
-// RegisterHandler Функция, в которой мы отдельно регистрируем маршруты, чтобы не писать все в одном месте
 func (h *Handler) RegisterHandler(router *gin.Engine) {
-	router.GET("/chemistry", h.GetAllElements)
-	router.GET("/element/:id", h.GetElementById)
-	//router.POST("/element/delete", h.DeleteElement) //удалить потом ибо не нужно, но проверить
-	router.POST("/element/add-to-mixing", h.AddToMixing)
-	router.GET("/mixingpage", h.GetMixingPage)
-	router.POST("/create-mixing", h.CreateMixing) //обединить с 4
-	// В вашем router setup
-	router.POST("/remove-from-mixing", h.RemoveFromMixing)
+	// API v1 группа
+	api := router.Group("/api/v1")
+	{
+		// Элементы (Elements)
+		elements := api.Group("/elements")
+		{
+			elements.GET("", h.GetAllElements)         // GET /api/v1/elements - список элементов
+			elements.GET("/:id", h.GetElementById)     // GET /api/v1/elements/:id - получить элемент
+			elements.POST("", h.CreateElement)         // POST /api/v1/elements - создать элемент
+			elements.PUT("/:id", h.UpdateElement)      // PUT /api/v1/elements/:id - обновить элемент
+			elements.DELETE("/:id", h.DeleteElement)   // DELETE /api/v1/elements/:id - удалить элемент сделать жестким
+			elements.POST("/:id/image", h.UploadImage) //POST добавление изображения.
+		}
 
-	router.POST("/elements", h.CreateElement) // add element
-	router.PUT("/elements/:id", h.UpdateElement)
+		// Корзина/Смешивание (Mixing)
+		mixing := api.Group("/mixing")
+		{
+			mixing.GET("", h.GetMixingPage)            // GET /api/v1/mixing - получить корзину
+			mixing.POST("", h.CreateMixing)            // POST /api/v1/mixing - создать смешивание
+			mixing.POST("/items", h.AddToMixing)       // POST /api/v1/mixing/items - добавить в корзину
+			mixing.POST("/remove", h.RemoveFromMixing) // POST /api/v1/mixing/remove - удалить из корзины
+		}
+
+		// Старые веб-роуты (можно оставить временно для обратной совместимости)
+		api.GET("/chemistry", h.GetAllElements)   // старый роут для обратной совместимости
+		api.GET("/element/:id", h.GetElementById) // старый роут для обратной совместимости
+	}
+
+	// HTML роуты (если еще нужны для фронтенда)
+	router.GET("/mixingpage", h.GetMixingPage)    // веб-версия страницы смешивания
+	router.POST("/create-mixing", h.CreateMixing) // веб-версия создания смешивания
 }
 
 // RegisterStatic То же самое, что и с маршрутами, регистрируем статику

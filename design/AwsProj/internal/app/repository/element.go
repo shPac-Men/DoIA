@@ -98,85 +98,104 @@ func (r *Repository) GetCartCount() int64 {
 	return count
 }
 
-func (r *Repository) DeleteElement(ElementID uint) error {
-	err := r.db.Model(&ds.Elements{}).Where("id = ?", ElementID).UpdateColumn("is_delete", true).Error
-	fmt.Println(ElementID)
+func (r *Repository) DeleteElement(id int) (string, error) {
+	// Сначала получаем элемент чтобы узнать путь к изображению
+	var element ds.Elements
+	err := r.db.Where("id = ? AND is_delete = ?", id, false).First(&element).Error
 	if err != nil {
-		return fmt.Errorf("ошибка при удалении с id %d: %w", ElementID, err)
+		return "", err
 	}
 
-	return nil
+	// Выполняем soft delete
+	err = r.db.Model(&ds.Elements{}).
+		Where("id = ?", id).
+		Update("is_delete", true).Error
+	if err != nil {
+		return "", err
+	}
+
+	// Возвращаем путь к изображению для удаления из MinIO
+	return element.Img, nil
 }
 
-func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		// 1. Ищем активную корзину (черновик) для пользователя
-		var cart ds.Mixed
-		err := tx.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
-
-		// Если корзина не найдена, создаём новую
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			cart = ds.Mixed{
-				Status:        "draft",
-				DateCreate:    time.Now(),
-				DateUpdate:    time.Now(),
-				CreatorID:     userID,
-				ModeratorID:   userID,
-				Concentartion: 0,
-				Ph:            0,
-			}
-			if err := tx.Create(&cart).Error; err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
-		}
-
-		// 2. Проверяем, есть ли уже этот элемент в корзине (включая удаленные)
-		var existingElem ds.ElemMix
-		err = tx.Unscoped().Where("mixed_id = ? AND element_id = ?", cart.ID, elementID).First(&existingElem).Error
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Элемент ещё не в корзине - добавляем новый
-			elemMix := ds.ElemMix{
-				MixedID:   cart.ID,
-				ElementID: elementID,
-				Volume:    volume,
-				Comment:   "",
-				IsDelete:  false, // явно указываем false
-			}
-			if err := tx.Create(&elemMix).Error; err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
-		} else {
-			// Элемент уже существует в корзине (возможно удаленный)
-			if existingElem.IsDelete {
-				// Восстанавливаем удаленный элемент
-				existingElem.IsDelete = false
-				existingElem.Volume = volume // обновляем объем на новый
-				existingElem.Comment = ""    // сбрасываем комментарий
-			} else {
-				// Элемент уже активен в корзине - можно обновить объем или оставить как есть
-				// existingElem.Volume += volume // если хотим суммировать объемы
-				// existingElem.Volume = volume  // если хотим заменить объем
-			}
-
-			if err := tx.Save(&existingElem).Error; err != nil {
-				return err
-			}
-		}
-
-		// 3. Обновляем данные mixed (дату обновления)
-		cart.DateUpdate = time.Now()
-		if err := tx.Save(&cart).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
+func (r *Repository) GetElementImagePath(id int) (string, error) {
+	var element ds.Elements
+	err := r.db.Select("img").Where("id = ? AND is_delete = ?", id, false).First(&element).Error
+	if err != nil {
+		return "", err
+	}
+	return element.Img, nil
 }
+
+// func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) error {
+// 	return r.db.Transaction(func(tx *gorm.DB) error {
+// 		// 1. Ищем активную корзину (черновик) для пользователя
+// 		var cart ds.Mixed
+// 		err := tx.Where("creator_id = ? AND status = ?", userID, "draft").First(&cart).Error
+
+// 		// Если корзина не найдена, создаём новую
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			cart = ds.Mixed{
+// 				Status:        "draft",
+// 				DateCreate:    time.Now(),
+// 				DateUpdate:    time.Now(),
+// 				CreatorID:     userID,
+// 				ModeratorID:   userID,
+// 				Concentartion: 0,
+// 				Ph:            0,
+// 			}
+// 			if err := tx.Create(&cart).Error; err != nil {
+// 				return err
+// 			}
+// 		} else if err != nil {
+// 			return err
+// 		}
+
+// 		// 2. Проверяем, есть ли уже этот элемент в корзине (включая удаленные)
+// 		var existingElem ds.ElemMix
+// 		err = tx.Unscoped().Where("mixed_id = ? AND element_id = ?", cart.ID, elementID).First(&existingElem).Error
+
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			// Элемент ещё не в корзине - добавляем новый
+// 			elemMix := ds.ElemMix{
+// 				MixedID:   cart.ID,
+// 				ElementID: elementID,
+// 				Volume:    volume,
+// 				Comment:   "",
+// 				IsDelete:  false, // явно указываем false
+// 			}
+// 			if err := tx.Create(&elemMix).Error; err != nil {
+// 				return err
+// 			}
+// 		} else if err != nil {
+// 			return err
+// 		} else {
+// 			// Элемент уже существует в корзине (возможно удаленный)
+// 			if existingElem.IsDelete {
+// 				// Восстанавливаем удаленный элемент
+// 				existingElem.IsDelete = false
+// 				existingElem.Volume = volume // обновляем объем на новый
+// 				existingElem.Comment = ""    // сбрасываем комментарий
+// 			} else {
+// 				// Элемент уже активен в корзине - можно обновить объем или оставить как есть
+// 				// existingElem.Volume += volume // если хотим суммировать объемы
+// 				// existingElem.Volume = volume  // если хотим заменить объем
+// 			}
+
+// 			if err := tx.Save(&existingElem).Error; err != nil {
+// 				return err
+// 			}
+// 		}
+
+// 		// 3. Обновляем данные mixed (дату обновления)
+// 		cart.DateUpdate = time.Now()
+// 		if err := tx.Save(&cart).Error; err != nil {
+// 			return err
+// 		}
+
+// 		return nil
+// 	})
+// }
 
 func (r *Repository) GetUserCart(userID uint) (*ds.Mixed, []ds.ElemMix, error) {
 	// Ищем корзину пользователя
@@ -303,3 +322,20 @@ func (r *Repository) RemoveFromCart(userID, elementID uint) error {
 		return nil
 	})
 }
+
+// UpdateElementImage обновляет путь к изображению элемента
+func (r *Repository) UpdateElementImage(elementID int, imagePath string) error {
+	return r.db.Model(&ds.Elements{}).
+		Where("id = ? AND is_delete = ?", elementID, false).
+		Update("img", imagePath).Error
+}
+
+// // GetElementImagePath возвращает текущий путь к изображению элемента
+// func (r *Repository) GetElementImagePath(elementID int) (string, error) {
+// 	var element ds.Elements
+// 	err := r.db.Select("img").Where("id = ? AND is_delete = ?", elementID, false).First(&element).Error
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return element.Img, nil
+// }
