@@ -40,11 +40,12 @@ func main() {
 		"admin123456",    // MinIO secret key
 		"staticimages",   // bucket name
 	)
+	userService := service.NewUserService(rep)
 	if err != nil {
 		logrus.Fatalf("error initializing element service: %v", err)
 	}
 	// ПЕРЕДАЕМ И REP И MIXING SERVICE
-	hand := handler.NewHandler(rep, mixingService, elementService)
+	hand := handler.NewHandler(rep, mixingService, elementService, userService)
 
 	application := pkg.NewApp(conf, router, hand)
 	application.RunApp()

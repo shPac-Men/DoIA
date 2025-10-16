@@ -3,10 +3,15 @@ package repository
 import (
 	"AwsProj/internal/app/ds"
 	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
 )
+
+func (r *Repository) GetDB() *gorm.DB {
+	return r.db
+}
 
 func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
@@ -68,6 +73,341 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 		// 3. Обновляем дату обновления корзины
 		cart.DateUpdate = time.Now()
 		if err := tx.Save(&cart).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// GetMixedList возвращает список заявок с фильтрацией
+func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]interface{}, error) {
+	var mixedList []ds.Mixed
+
+	// Базовый запрос - исключаем удаленные и черновики
+	query := r.db.Model(&ds.Mixed{}).
+		Preload("Creator").
+		Preload("Moderator").
+		Where("status != ? AND status != ?", "draft", "deleted")
+
+	// Фильтрация по статусу
+	if status, ok := filters["status"]; ok && status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	// Фильтрация по диапазону даты формирования
+	if dateFrom, ok := filters["date_from"]; ok && dateFrom != "" {
+		query = query.Where("date_create >= ?", dateFrom)
+	}
+	if dateTo, ok := filters["date_to"]; ok && dateTo != "" {
+		query = query.Where("date_create <= ?", dateTo)
+	}
+
+	// Сортировка по дате создания (новые сначала)
+	query = query.Order("date_create DESC")
+
+	// Выполняем запрос
+	err := query.Find(&mixedList).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Преобразуем в нужный формат с логинами
+	result := make([]map[string]interface{}, len(mixedList))
+	for i, mixed := range mixedList {
+		result[i] = map[string]interface{}{
+			"id":              mixed.ID,
+			"status":          mixed.Status,
+			"date_create":     mixed.DateCreate,
+			"date_update":     mixed.DateUpdate,
+			"date_finish":     mixed.DateFinish,
+			"creator_login":   mixed.Creator.Login,                // Логин создателя
+			"moderator_login": getModeratorLogin(mixed.Moderator), // Логин модератора
+			"ph":              mixed.Ph,
+			"concentration":   mixed.Concentartion,
+			"total_volume":    mixed.TotalVolume,
+			"added_water":     mixed.AddedWater,
+		}
+	}
+
+	return result, nil
+}
+
+// Вспомогательная функция для получения логина модератора
+func getModeratorLogin(moderator ds.Users) string {
+	if moderator.ID == 0 {
+		return ""
+	}
+	return moderator.Login
+}
+
+// GetMixedByID возвращает заявку по ID с ее элементами
+func (r *Repository) GetMixedByID(mixedID uint) (*ds.Mixed, []ds.ElemMix, error) {
+	var mixed ds.Mixed
+
+	// Ищем заявку с предзагрузкой создателя и модератора
+	err := r.db.Preload("Creator").Preload("Moderator").
+		Where("id = ? AND status != ? AND status != ?", mixedID, "draft", "deleted").
+		First(&mixed).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, fmt.Errorf("заявка не найдена")
+		}
+		return nil, nil, err
+	}
+
+	// Получаем элементы заявки (только не удаленные)
+	var elemMixes []ds.ElemMix
+	err = r.db.Preload("Element").
+		Where("mixed_id = ? AND is_delete = ?", mixedID, false).
+		Find(&elemMixes).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &mixed, elemMixes, nil
+}
+
+// UpdateMixed обновляет поля заявки
+func (r *Repository) UpdateMixed(mixedID uint, updates map[string]interface{}) error {
+	// Сначала проверяем существование заявки
+	var mixed ds.Mixed
+	err := r.db.Where("id = ? AND status != ?", mixedID, "deleted").First(&mixed).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("заявка не найдена")
+		}
+		return err
+	}
+
+	// Добавляем дату обновления
+	updates["date_update"] = time.Now()
+
+	// Обновляем заявку
+	err = r.db.Model(&ds.Mixed{}).
+		Where("id = ?", mixedID).
+		Updates(updates).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetMixedByIDForUpdate возвращает заявку для обновления (без лишних прелоадов)
+func (r *Repository) GetMixedByIDForUpdate(mixedID uint) (*ds.Mixed, error) {
+	var mixed ds.Mixed
+	err := r.db.Where("id = ? AND status != ?", mixedID, "deleted").First(&mixed).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("заявка не найдена")
+		}
+		return nil, err
+	}
+	return &mixed, nil
+}
+
+// ValidateMixedForCompletion проверяет обязательные поля для формирования заявки
+func (r *Repository) ValidateMixedForCompletion(mixedID uint) error {
+	var mixed ds.Mixed
+	err := r.db.Preload("Creator").Preload("Moderator").
+		Where("id = ? AND status = ?", mixedID, "draft").
+		First(&mixed).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("черновик заявки не найден")
+		}
+		return err
+	}
+
+	// Проверяем, что в заявке есть элементы
+	var itemsCount int64
+	err = r.db.Model(&ds.ElemMix{}).
+		Where("mixed_id = ? AND is_delete = ?", mixedID, false).
+		Count(&itemsCount).Error
+	if err != nil {
+		return err
+	}
+
+	if itemsCount == 0 {
+		return fmt.Errorf("заявка не может быть пустой")
+	}
+
+	return nil
+}
+
+// CompleteMixed формирует заявку (меняет статус и проставляет дату формирования)
+func (r *Repository) CompleteMixed(mixedID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var mixed ds.Mixed
+		err := tx.Where("id = ? AND status = ?", mixedID, "draft").First(&mixed).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("черновик заявки не найден")
+			}
+			return err
+		}
+
+		// Обновляем заявку - формируем ее
+		updates := map[string]interface{}{
+			"status":      "completed",
+			"date_update": time.Now(),
+		}
+
+		err = tx.Model(&ds.Mixed{}).
+			Where("id = ?", mixedID).
+			Updates(updates).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// GetMixedItems возвращает элементы заявки для проверки
+func (r *Repository) GetMixedItems(mixedID uint) ([]ds.ElemMix, error) {
+	var items []ds.ElemMix
+	err := r.db.Preload("Element").
+		Where("mixed_id = ? AND is_delete = ?", mixedID, false).
+		Find(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *Repository) GetMixedByIDBasic(mixedID uint) (*ds.Mixed, error) {
+	var mixed ds.Mixed
+	err := r.db.Where("id = ?", mixedID).First(&mixed).Error
+	if err != nil {
+		return nil, err
+	}
+	return &mixed, nil
+}
+
+func (r *Repository) DeleteMixed(mixedID uint) error {
+	// Сначала проверяем существование заявки
+	var mixed ds.Mixed
+	err := r.db.Where("id = ? AND status != ?", mixedID, "deleted").First(&mixed).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("заявка не найдена")
+		}
+		return err
+	}
+
+	// Выполняем soft delete - меняем статус на deleted и проставляем дату обновления
+	updates := map[string]interface{}{
+		"status":      "deleted",
+		"date_update": time.Now(),
+	}
+
+	err = r.db.Model(&ds.Mixed{}).
+		Where("id = ?", mixedID).
+		Updates(updates).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) HardDeleteMixed(mixedID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Удаляем связанные элементы корзины
+		err := tx.Where("mixed_id = ?", mixedID).Delete(&ds.ElemMix{}).Error
+		if err != nil {
+			return err
+		}
+
+		// Удаляем саму заявку
+		err = tx.Where("id = ?", mixedID).Delete(&ds.Mixed{}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// DeleteFromMixed удаляет элемент из заявки по mixed_id и element_id
+func (r *Repository) DeleteFromMixed(mixedID uint, elementID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Проверяем существование заявки
+		var mixed ds.Mixed
+		err := tx.Where("id = ? AND status = ?", mixedID, "draft").First(&mixed).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("черновик заявки не найден")
+			}
+			return err
+		}
+
+		// Проверяем существование элемента в заявке
+		var elemMix ds.ElemMix
+		err = tx.Where("mixed_id = ? AND element_id = ? AND is_delete = ?", mixedID, elementID, false).
+			First(&elemMix).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("элемент не найден в заявке")
+			}
+			return err
+		}
+
+		// Выполняем soft delete элемента
+		result := tx.Model(&ds.ElemMix{}).
+			Where("mixed_id = ? AND element_id = ?", mixedID, elementID).
+			Update("is_delete", true)
+
+		if result.Error != nil {
+			return result.Error
+		}
+
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("элемент не был удален")
+		}
+
+		// Обновляем дату изменения заявки
+		mixed.DateUpdate = time.Now()
+		if err := tx.Save(&mixed).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// HardDeleteFromMixed полностью удаляет элемент из заявки
+func (r *Repository) HardDeleteFromMixed(mixedID uint, elementID uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Проверяем существование заявки
+		var mixed ds.Mixed
+		err := tx.Where("id = ? AND status = ?", mixedID, "draft").First(&mixed).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("черновик заявки не найден")
+			}
+			return err
+		}
+
+		// Полностью удаляем элемент
+		result := tx.Where("mixed_id = ? AND element_id = ?", mixedID, elementID).
+			Delete(&ds.ElemMix{})
+
+		if result.Error != nil {
+			return result.Error
+		}
+
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("элемент не найден в заявке")
+		}
+
+		// Обновляем дату изменения заявки
+		mixed.DateUpdate = time.Now()
+		if err := tx.Save(&mixed).Error; err != nil {
 			return err
 		}
 

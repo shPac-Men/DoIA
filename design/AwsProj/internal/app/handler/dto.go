@@ -51,3 +51,8 @@ type UploadImageResponse struct {
 	Image   string `json:"image"`
 	Message string `json:"message"`
 }
+
+type CartIconResponse struct {
+	DraftOrderID int `json:"draft_order_id"`
+	ItemsCount   int `json:"items_count"`
+}
