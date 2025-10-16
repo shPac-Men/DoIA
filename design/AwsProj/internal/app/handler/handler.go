@@ -2,18 +2,23 @@ package handler
 
 import (
 	"AwsProj/internal/app/repository"
+	"AwsProj/internal/app/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
 type Handler struct {
-	Repository *repository.Repository
+	Repository     *repository.Repository
+	MixingService  *service.MixingService
+	ElementService *service.ElementService
 }
 
-func NewHandler(r *repository.Repository) *Handler {
+func NewHandler(r *repository.Repository, s *service.MixingService, e *service.ElementService) *Handler {
 	return &Handler{
-		Repository: r,
+		Repository:     r,
+		MixingService:  s,
+		ElementService: e,
 	}
 }
 
@@ -27,6 +32,9 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.POST("/create-mixing", h.CreateMixing) //обединить с 4
 	// В вашем router setup
 	router.POST("/remove-from-mixing", h.RemoveFromMixing)
+
+	router.POST("/elements", h.CreateElement) // add element
+	router.PUT("/elements/:id", h.UpdateElement)
 }
 
 // RegisterStatic То же самое, что и с маршрутами, регистрируем статику

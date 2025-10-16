@@ -57,6 +57,27 @@ func (r *Repository) SearchElementByName(name string) ([]ds.Elements, error) {
 	return elements, nil
 }
 
+// добавление Post
+func (r *Repository) CreateElement(element *ds.Elements) error {
+	return r.db.Create(element).Error
+}
+
+// CheckElementExists проверяет существование элемента по имени
+func (r *Repository) CheckElementExists(name string) (bool, error) {
+	var count int64
+	err := r.db.Model(&ds.Elements{}).
+		Where("name = ? AND is_delete = ?", name, false).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// PUT
+func (r *Repository) UpdateElement(id int, updates map[string]interface{}) error {
+	return r.db.Model(&ds.Elements{}).
+		Where("id = ? AND is_delete = ?", id, false).
+		Updates(updates).Error
+}
+
 // понять!!
 func (r *Repository) GetCartCount() int64 {
 	var mixedID uint

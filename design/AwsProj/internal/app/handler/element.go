@@ -7,26 +7,11 @@ import (
 	"strings"
 
 	"AwsProj/internal/app/ds"
+	"AwsProj/internal/app/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
-
-type ElementView struct {
-	ID            int
-	Image         string
-	Title         string
-	Concentration string // строка для отображения
-	PH            string // строка для отображения
-}
-
-type ElementResponse struct {
-	ID            int    `json:"id"`
-	Image         string `json:"image"`
-	Title         string `json:"title"`
-	Concentration string `json:"concentration"`
-	PH            string `json:"ph"`
-}
 
 func (h *Handler) GetAllElements(ctx *gin.Context) {
 	var elements []ds.Elements
@@ -81,29 +66,6 @@ func formatPH(ph float32) string {
 	return fmt.Sprintf("%.1f", ph)
 }
 
-// func (h *Handler) GetElementById(ctx *gin.Context) {
-// 	strId := ctx.Param("id")
-// 	id, err := strconv.Atoi(strId)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{
-// 			"error": err.Error(),
-// 		})
-// 		logrus.Error(err)
-// 		return
-// 	}
-
-// 	element, err := h.Repository.GetElementByID(id)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{
-// 			"error": err.Error(),
-// 		})
-// 		logrus.Error(err)
-// 		return
-// 	}
-
-// 	ctx.HTML(http.StatusOK, "element.html", element)
-// }
-
 func (h *Handler) GetElementById(ctx *gin.Context) {
 	strId := ctx.Param("id")
 	id, err := strconv.Atoi(strId)
@@ -140,6 +102,45 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    response,
+	})
+}
+
+func (h *Handler) CreateElement(ctx *gin.Context) {
+	var req service.CreateElementRequest
+
+	// Валидация входных данных
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Неверные данные запроса",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Вызов сервиса
+	result, err := h.ElementService.CreateElement(&req)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "уже существует") ||
+			strings.Contains(err.Error(), "обязательно") ||
+			strings.Contains(err.Error(), "диапазон") {
+			statusCode = http.StatusBadRequest
+		}
+
+		ctx.JSON(statusCode, gin.H{
+			"success": false,
+			"error":   "Ошибка создания элемента",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Успешный ответ
+	ctx.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"message": result.Message,
+		"data":    result,
 	})
 }
 
@@ -211,12 +212,11 @@ func (h *Handler) AddToMixing(ctx *gin.Context) {
 	})
 }
 
+// internal/app/handler/element.go
 func (h *Handler) GetMixingPage(ctx *gin.Context) {
-	// Захардкоженный пользователь
-	userID := uint(1)
+	userID := uint(1) // потом из аутентификации
 
-	// Получаем корзину и элементы
-	cart, cartItems, err := h.Repository.GetUserCart(userID)
+	result, err := h.MixingService.GetUserMixing(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -226,41 +226,13 @@ func (h *Handler) GetMixingPage(ctx *gin.Context) {
 		return
 	}
 
-	// Если корзины нет или она пустая
-	if cart == nil || len(cartItems) == 0 {
-		ctx.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"data":    []gin.H{},
-			"meta": gin.H{
-				"total_items": 0,
-				"cart_id":     0, // корзины нет, поэтому ID = 0
-				"user_id":     userID,
-				"message":     "Mixing cart is empty",
-			},
-		})
-		return
-	}
-
-	// Преобразуем элементы корзины в JSON-формат
-	var elements []gin.H
-	for _, item := range cartItems {
-		elements = append(elements, gin.H{
-			"id":            item.Element.ID,
-			"title":         item.Element.Name,
-			"image":         item.Element.Img,
-			"ph":            item.Element.Ph,
-			"concentration": item.Element.Concentration,
-			"volume":        item.Volume, // Добавляем объем из корзины
-		})
-	}
-
 	ctx.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    elements,
+		"data":    result.Items,
 		"meta": gin.H{
-			"total_items": len(elements),
-			"cart_id":     cart.ID, // теперь cart не nil, можно безопасно использовать
-			"user_id":     userID,
+			"total_items": result.TotalItems,
+			"cart_id":     result.CartID,
+			"user_id":     result.UserID,
 		},
 	})
 }
@@ -322,4 +294,58 @@ func (h *Handler) RemoveFromMixing(ctx *gin.Context) {
 
 	// Перенаправляем обратно на страницу корзины
 	ctx.Redirect(http.StatusFound, "/mixingpage")
+}
+
+func (h *Handler) UpdateElement(ctx *gin.Context) {
+	// Получаем ID из URL
+	strID := ctx.Param("id")
+	id, err := strconv.ParseUint(strID, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Неверный ID элемента",
+			"message": "ID должен быть числом",
+		})
+		return
+	}
+
+	var req service.UpdateElementRequest
+
+	// Валидация входных данных
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Неверные данные запроса",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Вызов сервиса
+	result, err := h.ElementService.UpdateElement(int(id), &req)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "не найден") {
+			statusCode = http.StatusNotFound
+		} else if strings.Contains(err.Error(), "уже существует") ||
+			strings.Contains(err.Error(), "диапазон") ||
+			strings.Contains(err.Error(), "отрицательной") ||
+			strings.Contains(err.Error(), "нет данных") {
+			statusCode = http.StatusBadRequest
+		}
+
+		ctx.JSON(statusCode, gin.H{
+			"success": false,
+			"error":   "Ошибка обновления элемента",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Успешный ответ
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": result.Message,
+		"data":    result,
+	})
 }

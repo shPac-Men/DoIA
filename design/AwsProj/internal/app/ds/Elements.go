@@ -1,7 +1,7 @@
 package ds
 
 type Elements struct {
-	ID            int    `gorm:"primaryKey"`
+	ID            int    `gorm:"primaryKey;autoIncrement"`
 	IsDelete      bool   `gorm:"type:boolean not null;default:false"`
 	Img           string `gorm:"type:varchar(100)"`
 	Name          string `gorm:"type:varchar(25);not null"`

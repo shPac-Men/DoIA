@@ -7,6 +7,7 @@ import (
 	"AwsProj/internal/app/dsn"
 	"AwsProj/internal/app/handler"
 	"AwsProj/internal/app/repository"
+	"AwsProj/internal/app/service"
 	"AwsProj/internal/pkg"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,11 @@ func main() {
 		logrus.Fatalf("error initializing repository: %v", errRep)
 	}
 
-	hand := handler.NewHandler(rep)
+	// СОЗДАЕМ MIXING SERVICE
+	mixingService := service.NewMixingService(rep)
+	elementService := service.NewElementService(rep)
+	// ПЕРЕДАЕМ И REP И MIXING SERVICE
+	hand := handler.NewHandler(rep, mixingService, elementService)
 
 	application := pkg.NewApp(conf, router, hand)
 	application.RunApp()
