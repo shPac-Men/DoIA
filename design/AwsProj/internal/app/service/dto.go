@@ -209,3 +209,38 @@ type RegisterResponse struct {
 	IsModerator bool   `json:"is_moderator"`
 	Message     string `json:"message"`
 }
+
+type UserProfileResponse struct {
+	ID          uint   `json:"id"`
+	Login       string `json:"login"`
+	IsModerator bool   `json:"is_moderator"`
+}
+
+type UpdateUserRequest struct {
+	Login    string `json:"login,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+// LoginRequest - запрос на аутентификацию
+type LoginRequest struct {
+	Login    string `json:"login" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+// LoginResponse - ответ после аутентификации
+type LoginResponse struct {
+	ID          uint   `json:"id"`
+	Login       string `json:"login"`
+	IsModerator bool   `json:"is_moderator"`
+	Message     string `json:"message"`
+}
+
+// LogoutRequest - запрос на деавторизацию (может быть пустым)
+type LogoutRequest struct {
+	// Можно добавить поля если нужны (например, token для blacklist)
+}
+
+// LogoutResponse - ответ после деавторизации
+type LogoutResponse struct {
+	Message string `json:"message"`
+}

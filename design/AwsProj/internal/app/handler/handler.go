@@ -61,7 +61,15 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 		}
 		auth := api.Group("/auth")
 		{
-			auth.POST("/register", userHandler.Register) // POST /api/v1/auth/register - регистрация
+			auth.POST("/register", userHandler.Register)     // POST /api/v1/auth/register - регистрация
+			auth.GET("/profile", userHandler.GetUserProfile) // GET /api/v1/auth/profile - данные пользователя
+			auth.PUT("/profile", userHandler.UpdateUser)     // PUT /api/v1/auth/profile - обновление пользователя
+			auth.POST("/login", userHandler.Login)           // POST /api/v1/auth/login - аутентификация
+			auth.POST("/logout", userHandler.Logout)
+		}
+		users := api.Group("/users")
+		{
+			users.GET("/:id", userHandler.GetUserByID) // GET /api/v1/users/:id - данные любого пользователя по ID
 		}
 		// Старые веб-роуты (можно оставить временно для обратной совместимости)
 		api.GET("/chemistry", h.GetAllElements)   // старый роут для обратной совместимости
