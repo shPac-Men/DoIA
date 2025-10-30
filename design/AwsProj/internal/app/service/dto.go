@@ -100,7 +100,6 @@ type CartIconResponse struct {
 }
 
 type MixedListRequest struct {
-	Status   string `form:"status"`
 	DateFrom string `form:"date_from"` // Изменяем на string
 	DateTo   string `form:"date_to"`   // Изменяем на string
 }

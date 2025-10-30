@@ -89,9 +89,10 @@ func (s *MixingService) GetMixedList(filters MixedListRequest) ([]MixedListItem,
 	// Подготавливаем фильтры для репозитория
 	repoFilters := make(map[string]interface{})
 
-	if filters.Status != "" {
-		repoFilters["status"] = filters.Status
-	}
+	// Убираем фильтрацию по статусу
+	// if filters.Status != "" {
+	//    repoFilters["status"] = filters.Status
+	// }
 
 	// Парсим даты из строкового формата
 	if filters.DateFrom != "" {
