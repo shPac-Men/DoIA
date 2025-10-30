@@ -84,24 +84,10 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]interface{}, error) {
 	var mixedList []ds.Mixed
 
-	// Базовый запрос - исключаем удаленные и черновики
+	// Базовый запрос - ВСЕ записи
 	query := r.db.Model(&ds.Mixed{}).
 		Preload("Creator").
-		Preload("Moderator").
-		Where("status != ? AND status != ?", "draft", "deleted")
-
-	// Фильтрация по статусу
-	if status, ok := filters["status"]; ok && status != "" {
-		query = query.Where("status = ?", status)
-	}
-
-	// Фильтрация по диапазону даты формирования
-	if dateFrom, ok := filters["date_from"]; ok && dateFrom != "" {
-		query = query.Where("date_create >= ?", dateFrom)
-	}
-	if dateTo, ok := filters["date_to"]; ok && dateTo != "" {
-		query = query.Where("date_create <= ?", dateTo)
-	}
+		Preload("Moderator")
 
 	// Сортировка по дате создания (новые сначала)
 	query = query.Order("date_create DESC")
@@ -121,8 +107,8 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 			"date_create":     mixed.DateCreate,
 			"date_update":     mixed.DateUpdate,
 			"date_finish":     mixed.DateFinish,
-			"creator_login":   mixed.Creator.Login,                // Логин создателя
-			"moderator_login": getModeratorLogin(mixed.Moderator), // Логин модератора
+			"creator_login":   mixed.Creator.Login,
+			"moderator_login": getModeratorLogin(mixed.Moderator),
 			"ph":              mixed.Ph,
 			"concentration":   mixed.Concentartion,
 			"total_volume":    mixed.TotalVolume,

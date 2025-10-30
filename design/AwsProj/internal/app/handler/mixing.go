@@ -16,8 +16,7 @@ func (h *Handler) AddToMixing(ctx *gin.Context) {
 	// Валидация входных данных
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Неверные данные запроса",
+			"error":   "Invalid request data",
 			"message": err.Error(),
 		})
 		return
@@ -37,26 +36,20 @@ func (h *Handler) AddToMixing(ctx *gin.Context) {
 		}
 
 		ctx.JSON(statusCode, gin.H{
-			"success": false,
-			"error":   "Ошибка добавления в корзину",
+			"error":   "Failed to add to mixing",
 			"message": err.Error(),
 		})
 		return
 	}
 
 	// Успешный ответ
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": result.Message,
-		"data":    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (h *Handler) GetCartIcon(ctx *gin.Context) {
 	response, err := h.MixingService.GetCartIcon()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to get cart icon",
 			"message": err.Error(),
 		})
@@ -64,11 +57,8 @@ func (h *Handler) GetCartIcon(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data": gin.H{
-			"cart_id":     response.DraftOrderID,
-			"total_items": response.ItemsCount,
-		},
+		"cart_id":     response.DraftOrderID,
+		"total_items": response.ItemsCount,
 	})
 }
 
@@ -78,7 +68,6 @@ func (h *Handler) GetMixedList(ctx *gin.Context) {
 	// Парсим query параметры
 	if err := ctx.ShouldBindQuery(&filters); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid query parameters",
 			"message": err.Error(),
 		})
@@ -89,19 +78,16 @@ func (h *Handler) GetMixedList(ctx *gin.Context) {
 	mixedList, err := h.MixingService.GetMixedList(filters)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to get mixed list",
 			"message": err.Error(),
 		})
 		return
 	}
 
+	// Возвращаем данные с total, но без success и data обертки
 	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    mixedList,
-		"meta": gin.H{
-			"total": len(mixedList),
-		},
+		"items": mixedList,
+		"total": len(mixedList),
 	})
 }
 
@@ -111,7 +97,6 @@ func (h *Handler) GetMixedByID(ctx *gin.Context) {
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid mixed ID",
 			"message": "ID must be a positive integer",
 		})
@@ -123,24 +108,19 @@ func (h *Handler) GetMixedByID(ctx *gin.Context) {
 	if err != nil {
 		if strings.Contains(err.Error(), "не найдена") {
 			ctx.JSON(http.StatusNotFound, gin.H{
-				"success": false,
 				"error":   "Mixed not found",
 				"message": err.Error(),
 			})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to get mixed details",
 			"message": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    mixedDetail,
-	})
+	ctx.JSON(http.StatusOK, mixedDetail)
 }
 
 func (h *Handler) UpdateMixed(ctx *gin.Context) {
@@ -149,7 +129,6 @@ func (h *Handler) UpdateMixed(ctx *gin.Context) {
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid mixed ID",
 			"message": "ID must be a positive integer",
 		})
@@ -160,7 +139,6 @@ func (h *Handler) UpdateMixed(ctx *gin.Context) {
 	var updateReq service.UpdateMixedRequest
 	if err := ctx.ShouldBindJSON(&updateReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid request body",
 			"message": err.Error(),
 		})
@@ -172,7 +150,6 @@ func (h *Handler) UpdateMixed(ctx *gin.Context) {
 	if err != nil {
 		if strings.Contains(err.Error(), "не найдена") {
 			ctx.JSON(http.StatusNotFound, gin.H{
-				"success": false,
 				"error":   "Mixed not found",
 				"message": err.Error(),
 			})
@@ -182,14 +159,12 @@ func (h *Handler) UpdateMixed(ctx *gin.Context) {
 			strings.Contains(err.Error(), "не может быть") ||
 			strings.Contains(err.Error(), "диапазон") {
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
 				"error":   "Validation error",
 				"message": err.Error(),
 			})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to update mixed",
 			"message": err.Error(),
 		})
@@ -197,11 +172,8 @@ func (h *Handler) UpdateMixed(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Заявка успешно обновлена",
-		"data": gin.H{
-			"mixed_id": mixedID,
-		},
+		"message":  "Заявка успешно обновлена",
+		"mixed_id": mixedID,
 	})
 }
 
@@ -211,7 +183,6 @@ func (h *Handler) CompleteMixed(ctx *gin.Context) {
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid mixed ID",
 			"message": "ID must be a positive integer",
 		})
@@ -222,7 +193,6 @@ func (h *Handler) CompleteMixed(ctx *gin.Context) {
 	var completeReq service.CompleteMixedRequest
 	if err := ctx.ShouldBindJSON(&completeReq); err != nil && err != io.EOF {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid request body",
 			"message": err.Error(),
 		})
@@ -234,7 +204,6 @@ func (h *Handler) CompleteMixed(ctx *gin.Context) {
 	if err != nil {
 		if strings.Contains(err.Error(), "не найден") {
 			ctx.JSON(http.StatusNotFound, gin.H{
-				"success": false,
 				"error":   "Mixed not found",
 				"message": err.Error(),
 			})
@@ -243,24 +212,19 @@ func (h *Handler) CompleteMixed(ctx *gin.Context) {
 		if strings.Contains(err.Error(), "не может быть пустой") ||
 			strings.Contains(err.Error(), "должен быть положительным") {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-				"success": false,
 				"error":   "Validation failed",
 				"message": err.Error(),
 			})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to complete mixed",
 			"message": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    response,
-	})
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) DeleteMixed(ctx *gin.Context) {
@@ -269,7 +233,6 @@ func (h *Handler) DeleteMixed(ctx *gin.Context) {
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid mixed ID",
 			"message": "ID must be a positive integer",
 		})
@@ -280,7 +243,6 @@ func (h *Handler) DeleteMixed(ctx *gin.Context) {
 	var deleteReq service.DeleteMixedRequest
 	if err := ctx.ShouldBindJSON(&deleteReq); err != nil && err != io.EOF {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid request body",
 			"message": err.Error(),
 		})
@@ -292,24 +254,19 @@ func (h *Handler) DeleteMixed(ctx *gin.Context) {
 	if err != nil {
 		if strings.Contains(err.Error(), "не найдена") {
 			ctx.JSON(http.StatusNotFound, gin.H{
-				"success": false,
 				"error":   "Mixed not found",
 				"message": err.Error(),
 			})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to delete mixed",
 			"message": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    response,
-	})
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) DeleteFromMixed(ctx *gin.Context) {
@@ -318,7 +275,6 @@ func (h *Handler) DeleteFromMixed(ctx *gin.Context) {
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid mixed ID",
 			"message": "ID must be a positive integer",
 		})
@@ -329,7 +285,6 @@ func (h *Handler) DeleteFromMixed(ctx *gin.Context) {
 	var deleteReq service.DeleteFromMixedRequest
 	if err := ctx.ShouldBindJSON(&deleteReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid request body",
 			"message": err.Error(),
 		})
@@ -341,22 +296,17 @@ func (h *Handler) DeleteFromMixed(ctx *gin.Context) {
 	if err != nil {
 		if strings.Contains(err.Error(), "не найден") {
 			ctx.JSON(http.StatusNotFound, gin.H{
-				"success": false,
 				"error":   "Not found",
 				"message": err.Error(),
 			})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to delete from mixed",
 			"message": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    response,
-	})
+	ctx.JSON(http.StatusOK, response)
 }

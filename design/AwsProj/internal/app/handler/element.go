@@ -36,7 +36,7 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   true,
+			"error":   "Failed to get elements",
 			"message": err.Error(),
 		})
 		logrus.Error(err)
@@ -44,7 +44,6 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 	}
 
 	// Преобразуем в JSON-ответ
-	//сериализация данных из бд в джсон
 	var response []ElementResponse
 	for _, elem := range elements {
 		response = append(response, ElementResponse{
@@ -57,13 +56,9 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    response,
-		"meta": gin.H{
-			"total":    len(response),
-			"query":    search,
-			"has_more": false, // можно добавить пагинацию позже
-		},
+		"items": response,
+		"total": len(response),
+		"query": search,
 	})
 }
 
@@ -81,7 +76,6 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 	id, err := strconv.Atoi(strId)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
 			"error":   "Invalid ID format",
 			"message": "ID must be a number",
 		})
@@ -92,7 +86,6 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 	element, err := h.Repository.GetElementByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
-			"success": false,
 			"error":   "Element not found",
 			"message": err.Error(),
 		})
@@ -109,10 +102,7 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 		PH:            formatPH(element.Ph),
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    response,
-	})
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) CreateElement(ctx *gin.Context) {
@@ -121,8 +111,7 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 	// Валидация входных данных
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Неверные данные запроса",
+			"error":   "Invalid request data",
 			"message": err.Error(),
 		})
 		return
@@ -139,78 +128,22 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 		}
 
 		ctx.JSON(statusCode, gin.H{
-			"success": false,
-			"error":   "Ошибка создания элемента",
+			"error":   "Failed to create element",
 			"message": err.Error(),
 		})
 		return
 	}
 
 	// Успешный ответ
-	ctx.JSON(http.StatusCreated, gin.H{
-		"success": true,
-		"message": result.Message,
-		"data":    result,
-	})
+	ctx.JSON(http.StatusCreated, result)
 }
 
-// deepseek
-// func (h *Handler) AddToMixing(ctx *gin.Context) {
-// 	// 1. Получаем ID элемента из JSON тела запроса
-// 	var request struct {
-// 		ElementID int     `json:"element_id" binding:"required"`
-// 		Volume    float32 `json:"volume,omitempty"` // опционально
-// 	}
-
-// 	if err := ctx.ShouldBindJSON(&request); err != nil {
-// 		ctx.JSON(http.StatusBadRequest, gin.H{
-// 			"success": false,
-// 			"error":   "Invalid request data",
-// 			"message": err.Error(),
-// 		})
-// 		return
-// 	}
-
-// 	// 2. Получаем ID пользователя (пока хардкод, потом через аутентификацию)
-// 	userID := uint(1)
-
-// 	// 3. Объём по умолчанию
-// 	volume := request.Volume
-// 	if volume == 0 {
-// 		volume = 100.0 // значение по умолчанию
-// 	}
-
-// 	// 4. Добавляем элемент в корзину
-// 	err := h.Repository.AddElementToCart(userID, uint(request.ElementID), volume)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{
-// 			"success": false,
-// 			"error":   "Failed to add element to mixing",
-// 			"message": err.Error(),
-// 		})
-// 		return
-// 	}
-
-// 	// 5. Возвращаем JSON ответ вместо редиректа
-// 	ctx.JSON(http.StatusOK, gin.H{
-// 		"success": true,
-// 		"message": "Element added to mixing successfully",
-// 		"data": gin.H{
-// 			"element_id": request.ElementID,
-// 			"volume":     volume,
-// 			"user_id":    userID,
-// 		},
-// 	})
-// }
-
-// internal/app/handler/element.go
 func (h *Handler) GetMixingPage(ctx *gin.Context) {
 	userID := uint(1) // потом из аутентификации
 
 	result, err := h.MixingService.GetUserMixing(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to get mixing data",
 			"message": err.Error(),
 		})
@@ -218,13 +151,10 @@ func (h *Handler) GetMixingPage(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    result.Items,
-		"meta": gin.H{
-			"total_items": result.TotalItems,
-			"cart_id":     result.CartID,
-			"user_id":     result.UserID,
-		},
+		"items":       result.Items,
+		"total_items": result.TotalItems,
+		"cart_id":     result.CartID,
+		"user_id":     result.UserID,
 	})
 }
 
@@ -245,7 +175,6 @@ func (h *Handler) CreateMixing(ctx *gin.Context) {
 	calculatedPH, err := h.Repository.CompleteCartAndCreateNew(userID, request.AddedWater)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
 			"error":   "Failed to create mixing",
 			"message": err.Error(),
 		})
@@ -254,13 +183,9 @@ func (h *Handler) CreateMixing(ctx *gin.Context) {
 
 	// 3. Возвращаем JSON результат вместо HTML
 	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Mixing successfully created",
-		"data": gin.H{
-			"calculated_ph": calculatedPH,
-			"added_water":   request.AddedWater,
-			"user_id":       userID,
-		},
+		"calculated_ph": calculatedPH,
+		"added_water":   request.AddedWater,
+		"user_id":       userID,
 	})
 }
 
@@ -293,9 +218,8 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 	id, err := strconv.ParseUint(strID, 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Неверный ID элемента",
-			"message": "ID должен быть числом",
+			"error":   "Invalid element ID",
+			"message": "ID must be a number",
 		})
 		return
 	}
@@ -305,8 +229,7 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 	// Валидация входных данных
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Неверные данные запроса",
+			"error":   "Invalid request data",
 			"message": err.Error(),
 		})
 		return
@@ -326,19 +249,14 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 		}
 
 		ctx.JSON(statusCode, gin.H{
-			"success": false,
-			"error":   "Ошибка обновления элемента",
+			"error":   "Failed to update element",
 			"message": err.Error(),
 		})
 		return
 	}
 
 	// Успешный ответ
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": result.Message,
-		"data":    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (h *Handler) DeleteElement(ctx *gin.Context) {
@@ -347,9 +265,8 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 	id, err := strconv.Atoi(strID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Неверный ID элемента",
-			"message": "ID должен быть числом",
+			"error":   "Invalid element ID",
+			"message": "ID must be a number",
 		})
 		return
 	}
@@ -363,19 +280,14 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 		}
 
 		ctx.JSON(statusCode, gin.H{
-			"success": false,
-			"error":   "Ошибка удаления элемента",
+			"error":   "Failed to delete element",
 			"message": err.Error(),
 		})
 		return
 	}
 
 	// Успешный ответ
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": result.Message,
-		"data":    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (h *Handler) UploadImage(ctx *gin.Context) {
@@ -384,9 +296,8 @@ func (h *Handler) UploadImage(ctx *gin.Context) {
 	elementID, err := strconv.Atoi(strID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Неверный ID элемента",
-			"message": "ID должен быть числом",
+			"error":   "Invalid element ID",
+			"message": "ID must be a number",
 		})
 		return
 	}
@@ -395,9 +306,8 @@ func (h *Handler) UploadImage(ctx *gin.Context) {
 	fileHeader, err := ctx.FormFile("image")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Файл не найден",
-			"message": "Необходимо загрузить изображение",
+			"error":   "File not found",
+			"message": "Image file is required",
 		})
 		return
 	}
@@ -414,17 +324,12 @@ func (h *Handler) UploadImage(ctx *gin.Context) {
 		}
 
 		ctx.JSON(statusCode, gin.H{
-			"success": false,
-			"error":   "Ошибка загрузки изображения",
+			"error":   "Failed to upload image",
 			"message": err.Error(),
 		})
 		return
 	}
 
 	// Успешный ответ
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": result.Message,
-		"data":    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
