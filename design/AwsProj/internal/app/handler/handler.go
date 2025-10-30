@@ -65,14 +65,20 @@ func (h *Handler) GetOrder(ctx *gin.Context) {
 }
 
 func (h *Handler) CalculatePage(ctx *gin.Context) {
-	orders, err := h.Repository.GetOrders()
+	cartItems, err := h.Repository.GetCartItems()
 	if err != nil {
 		logrus.Error(err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		// В случае ошибки передаем пустой массив в шаблон calculatepage.html
+		ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
+			"cartItems": []repository.Order{},
+			"error":     "Корзина пуста",
+		})
 		return
 	}
 
+	// Используем шаблон calculatepage.html, но передаем в него cartItems вместо orders
 	ctx.HTML(http.StatusOK, "calculatepage.html", gin.H{
-		"orders": orders,
+		"cartItems": cartItems,
+		"time":      time.Now().Format("15:04:05"),
 	})
 }
