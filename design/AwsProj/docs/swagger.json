@@ -1,0 +1,78 @@
+{
+    "schemes": [
+        "https",
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Bmstu Open IT Platform",
+        "title": "BITOP",
+        "contact": {
+            "name": "API Support",
+            "url": "https://vk.com/bmstu_schedule",
+            "email": "bitop@spatecon.ru"
+        },
+        "license": {
+            "name": "AS IS (NO WARRANTY)"
+        },
+        "version": "1.0"
+    },
+    "host": "http://localhost:8082",
+    "basePath": "/api/v1",
+    "paths": {
+        "/api/v1/elements": {
+            "get": {
+                "description": "Get list of all elements with optional search by name",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "elements"
+                ],
+                "summary": "Get all elements",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query by element name",
+                        "name": "query",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success response",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_app_handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "internal_app_handler.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

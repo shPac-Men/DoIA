@@ -10,10 +10,28 @@ import (
 	"AwsProj/internal/app/service"
 	"AwsProj/internal/pkg"
 
+	_ "AwsProj/docs" // docs генерируется Swag
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+// @title BITOP
+// @version 1.0
+// @description Bmstu Open IT Platform
+
+// @contact.name API Support
+// @contact.url https://vk.com/bmstu_schedule
+// @contact.email bitop@spatecon.ru
+
+// @license.name AS IS (NO WARRANTY)
+
+// @host http://localhost:8082
+// @schemes https http
+// @BasePath /api/v1
 
 func main() {
 	_ = godotenv.Load("../../.env")
@@ -22,6 +40,8 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("error loading config: %v", err)
 	}
+	//маршрут для сваги
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	postgresString := dsn.FromEnv()
 	fmt.Println(postgresString)

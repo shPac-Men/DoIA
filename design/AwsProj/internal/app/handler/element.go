@@ -13,6 +13,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// GetAllElements godoc
+// @Summary Get all elements
+// @Description Get list of all elements with optional search by name
+// @Tags elements
+// @Accept json
+// @Produce json
+// @Param query query string false "Search query by element name"
+// @Success 200 {object} map[string]interface{} "Success response"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/elements [get]
 func (h *Handler) GetAllElements(ctx *gin.Context) {
 	var elements []ds.Elements
 	var err error
