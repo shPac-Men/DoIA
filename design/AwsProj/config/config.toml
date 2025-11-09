@@ -1,2 +1,7 @@
 ServiceHost = "0.0.0.0"
 ServicePort = 8082
+
+[jwt]
+token = "your-secret-key"
+expires_in = "24h"
+signing_method = "HS256"

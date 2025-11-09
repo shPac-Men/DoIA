@@ -29,18 +29,32 @@ import (
 
 // @license.name AS IS (NO WARRANTY)
 
-// @host http://localhost:8082
-// @schemes https http
+// @host localhost:8082
+// @schemes http
 // @BasePath /api/v1
-
 func main() {
 	_ = godotenv.Load("../../.env")
 	router := gin.Default()
+
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	// Загружаем конфиг ПЕРВЫМ делом
 	conf, err := config.NewConfig()
 	if err != nil {
 		logrus.Fatalf("error loading config: %v", err)
 	}
-	//маршрут для сваги
+
+	// Маршрут для сваггера
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	postgresString := dsn.FromEnv()
@@ -51,7 +65,7 @@ func main() {
 		logrus.Fatalf("error initializing repository: %v", errRep)
 	}
 
-	// СОЗДАЕМ MIXING SERVICE
+	// СОЗДАЕМ СЕРВИСЫ
 	mixingService := service.NewMixingService(rep)
 	elementService, err := service.NewElementService(
 		rep,
@@ -60,12 +74,14 @@ func main() {
 		"admin123456",    // MinIO secret key
 		"staticimages",   // bucket name
 	)
-	userService := service.NewUserService(rep)
 	if err != nil {
 		logrus.Fatalf("error initializing element service: %v", err)
 	}
-	// ПЕРЕДАЕМ И REP И MIXING SERVICE
-	hand := handler.NewHandler(rep, mixingService, elementService, userService)
+
+	userService := service.NewUserService(rep)
+
+	// ПЕРЕДАЕМ КОНФИГ В HANDLER (добавляем conf в параметры)
+	hand := handler.NewHandler(rep, mixingService, elementService, userService, conf)
 
 	application := pkg.NewApp(conf, router, hand)
 	application.RunApp()

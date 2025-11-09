@@ -2,15 +2,26 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type Config struct {
 	ServiceHost string
 	ServicePort int
+	JWT         JWTConfig
+}
+
+type JWTConfig struct {
+	Token               string        `mapstructure:"token"`
+	ExpiresIn           time.Duration `mapstructure:"expires_in"`
+	SigningMethodString string        `mapstructure:"signing_method"`
+	SigningMethod       jwt.SigningMethod
 }
 
 func NewConfig() (*Config, error) {
@@ -49,4 +60,21 @@ func NewConfig() (*Config, error) {
 	log.Info("config parsed")
 
 	return cfg, nil
+}
+
+func (c *Config) initJWT() error {
+	// Конвертируем строку в метод подписи JWT
+	switch c.JWT.SigningMethodString {
+	case "HS256":
+		c.JWT.SigningMethod = jwt.SigningMethodHS256
+	case "HS384":
+		c.JWT.SigningMethod = jwt.SigningMethodHS384
+	case "HS512":
+		c.JWT.SigningMethod = jwt.SigningMethodHS512
+	default:
+		c.JWT.SigningMethod = jwt.SigningMethodHS256
+		c.JWT.SigningMethodString = "HS256"
+	}
+
+	return nil
 }

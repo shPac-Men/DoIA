@@ -19,10 +19,12 @@ import (
 // @Tags elements
 // @Accept json
 // @Produce json
+// @Security BearerAuth  // ← ДОБАВИТЬ эту строку!
 // @Param query query string false "Search query by element name"
 // @Success 200 {object} map[string]interface{} "Success response"
+// @Failure 403 {object} ErrorResponse "Forbidden"
 // @Failure 500 {object} ErrorResponse "Internal server error"
-// @Router /api/v1/elements [get]
+// @Router /elements [get]  // ← ИСПРАВИТЬ: убрать /api/v1
 func (h *Handler) GetAllElements(ctx *gin.Context) {
 	var elements []ds.Elements
 	var err error

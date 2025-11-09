@@ -1,6 +1,6 @@
 basePath: /api/v1
 definitions:
-  internal_app_handler.ErrorResponse:
+  handler.ErrorResponse:
     properties:
       error:
         type: string
@@ -9,7 +9,32 @@ definitions:
       success:
         type: boolean
     type: object
-host: http://localhost:8082
+  handler.LoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      token_type:
+        type: string
+    type: object
+  handler.PingResponse:
+    properties:
+      auth:
+        type: boolean
+      message:
+        type: string
+      status:
+        type: boolean
+    type: object
+host: localhost:8082
 info:
   contact:
     email: bitop@spatecon.ru
@@ -21,7 +46,41 @@ info:
   title: BITOP
   version: "1.0"
 paths:
-  /api/v1/elements:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: User login
+      tags:
+      - auth
+  /elements:
     get:
       consumes:
       - application/json
@@ -39,14 +98,38 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/internal_app_handler.ErrorResponse'
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth  // ← ДОБАВИТЬ эту строку!: []
       summary: Get all elements
       tags:
       - elements
+  /ping:
+    get:
+      description: Check if service is working and user is authenticated
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PingResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ping endpoint
+      tags:
+      - utils
 schemes:
-- https
 - http
 swagger: "2.0"
