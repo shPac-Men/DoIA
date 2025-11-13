@@ -2,61 +2,58 @@ package handler
 
 // ========== AUTH DTOs ==========
 type LoginRequest struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login    string `json:"login" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type LoginResponse struct {
-	ExpiresIn   int64  `json:"expires_in"`
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
+	Token     string   `json:"token"`
+	ExpiresIn int64    `json:"expires_in"`
+	TokenType string   `json:"token_type"`
+	User      UserInfo `json:"user"`
 }
 
-type PingResponse struct {
-	Auth    bool   `json:"auth"`
-	Status  bool   `json:"status"`
-	Message string `json:"message"`
+type UserInfo struct {
+	ID          uint   `json:"id"`
+	Login       string `json:"login"`
+	Role        string `json:"role"`
+	IsModerator bool   `json:"is_moderator"`
 }
 
 type RegisterRequest struct {
-	Login    string `json:"login" binding:"required"`
+	Login    string `json:"login" binding:"required,min=3,max=25"`
 	Password string `json:"password" binding:"required,min=6"`
-	Email    string `json:"email" binding:"required,email"`
 }
 
 type RegisterResponse struct {
-	ID    int    `json:"id"`
-	Login string `json:"login"`
-	Email string `json:"email"`
+	User    UserInfo `json:"user"`
+	Message string   `json:"message"`
 }
 
 type UserProfileResponse struct {
-	ID       int    `json:"id"`
-	Login    string `json:"login"`
-	Email    string `json:"email"`
-	UserUUID string `json:"user_uuid"`
+	ID          uint   `json:"id"`
+	Login       string `json:"login"`
+	Role        string `json:"role"`
+	IsModerator bool   `json:"is_moderator"`
 }
 
 type UpdateUserRequest struct {
-	Email *string `json:"email,omitempty" binding:"omitempty,email"`
-	Login *string `json:"login,omitempty" binding:"omitempty,min=3"`
+	Login    *string `json:"login,omitempty" binding:"omitempty,min=3,max=25"`
+	Password *string `json:"password,omitempty" binding:"omitempty,min=6"`
+}
+
+type UpdateUserRoleRequest struct {
+	IsModerator bool `json:"is_moderator"`
 }
 
 // ========== ELEMENT DTOs ==========
-type ElementView struct {
-	ID            int
-	Image         string
-	Title         string
-	Concentration string
-	PH            string
-}
-
 type ElementResponse struct {
-	ID            int    `json:"id"`
-	Image         string `json:"image"`
-	Title         string `json:"title"`
-	Concentration string `json:"concentration"`
-	PH            string `json:"ph"`
+	ID            int     `json:"id"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Ph            float32 `json:"ph"`
+	Concentration float32 `json:"concentration"`
+	Image         string  `json:"image"`
 }
 
 type CreateElementRequest struct {
@@ -73,16 +70,6 @@ type UpdateElementRequest struct {
 	Concentration *float32 `json:"concentration,omitempty" binding:"omitempty,min=0"`
 }
 
-type UpdateElementResponse struct {
-	ID            int     `json:"id"`
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	Ph            float32 `json:"ph"`
-	Concentration float32 `json:"concentration"`
-	Image         string  `json:"image"`
-	Message       string  `json:"message"`
-}
-
 type UploadImageResponse struct {
 	ID      int    `json:"id"`
 	Image   string `json:"image"`
@@ -90,54 +77,110 @@ type UploadImageResponse struct {
 }
 
 // ========== MIXING DTOs ==========
-type CartIconResponse struct {
-	DraftOrderID int `json:"draft_order_id"`
-	ItemsCount   int `json:"items_count"`
-}
-
 type AddToMixingRequest struct {
-	ElementID int `json:"element_id" binding:"required"`
-	Quantity  int `json:"quantity" binding:"required,min=1"`
+	ElementID int     `json:"element_id" binding:"required"`
+	Volume    float32 `json:"volume" binding:"required,min=0"`
 }
 
 type RemoveFromMixingRequest struct {
 	ElementID int `json:"element_id" binding:"required"`
 }
 
-type CreateMixingRequest struct {
-	Title       string `json:"title" binding:"required"`
-	Description string `json:"description"`
+type CartIconResponse struct {
+	DraftOrderID int `json:"draft_order_id"`
+	ItemsCount   int `json:"items_count"`
 }
 
-type CreateMixingResponse struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
+type MixingResponse struct {
+	Items      []MixingItemResponse `json:"items"`
+	TotalItems int                  `json:"total_items"`
+	CartID     uint                 `json:"cart_id"`
+	UserID     uint                 `json:"user_id"`
+}
+
+type MixingItemResponse struct {
+	ID            int     `json:"id"`
+	Title         string  `json:"title"`
+	Image         string  `json:"image"`
+	Ph            float32 `json:"ph"`
+	Concentration float32 `json:"concentration"`
+	Volume        float32 `json:"volume"`
 }
 
 // ========== COMMON DTOs ==========
-type ErrorResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error"`
-	Message string `json:"message"`
-}
-
 type SuccessResponse struct {
 	Success bool        `json:"success"`
-	Message string      `json:"message"`
+	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-type PaginationRequest struct {
-	Page  int `form:"page,default=1" binding:"min=1"`
-	Limit int `form:"limit,default=20" binding:"min=1,max=100"`
+type ErrorResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
 }
 
-type PaginationResponse struct {
-	Page       int         `json:"page"`
-	Limit      int         `json:"limit"`
-	Total      int         `json:"total"`
-	TotalPages int         `json:"total_pages"`
-	Data       interface{} `json:"data"`
+type PingResponse struct {
+	Status  bool   `json:"status"`
+	Auth    bool   `json:"auth"`
+	UserID  uint   `json:"user_id,omitempty"`
+	Role    string `json:"role,omitempty"`
+	Message string `json:"message"`
+}
+
+type MixedListResponse struct {
+	Items []MixedListItem `json:"items"`
+	Total int             `json:"total"`
+}
+
+type MixedListItem struct {
+	ID             uint    `json:"id"`
+	Status         string  `json:"status"`
+	DateCreate     string  `json:"date_create"`
+	DateUpdate     string  `json:"date_update"`
+	DateFinish     string  `json:"date_finish,omitempty"`
+	CreatorLogin   string  `json:"creator_login"`
+	ModeratorLogin string  `json:"moderator_login,omitempty"`
+	Ph             float32 `json:"ph"`
+	Concentration  float32 `json:"concentration"`
+	TotalVolume    float64 `json:"total_volume"`
+	AddedWater     float64 `json:"added_water"`
+}
+
+type MixedDetailResponse struct {
+	ID             uint              `json:"id"`
+	Status         string            `json:"status"`
+	DateCreate     string            `json:"date_create"`
+	DateUpdate     string            `json:"date_update"`
+	DateFinish     string            `json:"date_finish,omitempty"`
+	CreatorLogin   string            `json:"creator_login"`
+	ModeratorLogin string            `json:"moderator_login,omitempty"`
+	Ph             float32           `json:"ph"`
+	Concentration  float32           `json:"concentration"`
+	TotalVolume    float64           `json:"total_volume"`
+	AddedWater     float64           `json:"added_water"`
+	Items          []MixedDetailItem `json:"items"`
+}
+
+type MixedDetailItem struct {
+	ElementID     int     `json:"element_id"`
+	Title         string  `json:"title"`
+	Image         string  `json:"image"`
+	Ph            float32 `json:"ph"`
+	Concentration float32 `json:"concentration"`
+	Volume        float32 `json:"volume"`
+	Comment       string  `json:"comment,omitempty"`
+}
+
+type UpdateMixedRequest struct {
+	Status        *string  `json:"status,omitempty"`
+	Concentration *float32 `json:"concentration,omitempty"`
+	Ph            *float32 `json:"ph,omitempty"`
+	TotalVolume   *float64 `json:"total_volume,omitempty"`
+	AddedWater    *float64 `json:"added_water,omitempty"`
+}
+
+type CreateMixingRequest struct {
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
 }

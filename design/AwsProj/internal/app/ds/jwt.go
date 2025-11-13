@@ -6,7 +6,11 @@ import (
 )
 
 type JWTClaims struct {
-	jwt.StandardClaims           // все что точно необходимо по RFC
-	UserUUID           uuid.UUID `json:"user_uuid"` // наши данные - uuid этого пользователя в базе данных
-	Scopes             []string  `json:"scopes"`    // список доступов в нашей системе
+	jwt.StandardClaims
+	UserID      uint      `json:"user_id"`      // ID из БД
+	UserUUID    uuid.UUID `json:"user_uuid"`    // UUID для дополнительной безопасности
+	Login       string    `json:"login"`        // Логин пользователя
+	Role        string    `json:"role"`         // "guest", "visitor", "admin"
+	IsModerator bool      `json:"is_moderator"` // Флаг модератора из БД
+	Scopes      []string  `json:"scopes"`       // Дополнительные права
 }

@@ -2,18 +2,27 @@ package service
 
 import (
 	"AwsProj/internal/app/ds"
+	"AwsProj/internal/app/repository"
 	"errors"
 	"fmt"
 	"time"
 )
 
+type MixingService struct {
+	repo *repository.Repository
+}
+
+func NewMixingService(repo *repository.Repository) *MixingService {
+	return &MixingService{repo: repo}
+}
+
+// GetUserMixing получает корзину пользователя
 func (s *MixingService) GetUserMixing(userID uint) (*MixingResponse, error) {
 	cart, cartItems, err := s.repo.GetUserCart(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Бизнес-логика здесь!
 	var items []MixingItem
 	for _, item := range cartItems {
 		items = append(items, MixingItem{
@@ -34,8 +43,8 @@ func (s *MixingService) GetUserMixing(userID uint) (*MixingResponse, error) {
 	}, nil
 }
 
+// AddElementToMixing добавляет элемент в корзину
 func (s *MixingService) AddElementToMixing(userID uint, req *AddToMixingRequest) (*AddToMixingResponse, error) {
-	// Валидация бизнес-правил
 	if req.ElementID <= 0 {
 		return nil, errors.New("ID элемента должен быть положительным числом")
 	}
@@ -44,19 +53,16 @@ func (s *MixingService) AddElementToMixing(userID uint, req *AddToMixingRequest)
 		return nil, errors.New("объем не может быть отрицательным")
 	}
 
-	// Устанавливаем объем по умолчанию
 	volume := req.Volume
 	if volume == 0 {
 		volume = 100.0
 	}
 
-	// Проверяем существование элемента
 	_, err := s.repo.GetElementByID(req.ElementID)
 	if err != nil {
 		return nil, errors.New("элемент не найден")
 	}
 
-	// Добавляем элемент в корзину
 	err = s.repo.AddElementToCart(userID, uint(req.ElementID), volume)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка добавления в корзину: %v", err)
@@ -71,9 +77,8 @@ func (s *MixingService) AddElementToMixing(userID uint, req *AddToMixingRequest)
 }
 
 // GetCartIcon возвращает информацию для иконки корзины
-func (s *MixingService) GetCartIcon() (*CartIconResponse, error) {
-	// Используем хардкод как в вашем существующем коде
-	cartID, itemsCount, err := s.repo.GetCartIconInfo(1) // userID = 1
+func (s *MixingService) GetCartIcon(userID uint) (*CartIconResponse, error) {
+	cartID, itemsCount, err := s.repo.GetCartIconInfo(int(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -84,17 +89,10 @@ func (s *MixingService) GetCartIcon() (*CartIconResponse, error) {
 	}, nil
 }
 
-// GetMixedList возвращает список заявок
+// GetMixedList возвращает список всех заявок
 func (s *MixingService) GetMixedList(filters MixedListRequest) ([]MixedListItem, error) {
-	// Подготавливаем фильтры для репозитория
 	repoFilters := make(map[string]interface{})
 
-	// Убираем фильтрацию по статусу
-	// if filters.Status != "" {
-	//    repoFilters["status"] = filters.Status
-	// }
-
-	// Парсим даты из строкового формата
 	if filters.DateFrom != "" {
 		dateFrom, err := time.Parse("2006-01-02", filters.DateFrom)
 		if err != nil {
@@ -108,18 +106,50 @@ func (s *MixingService) GetMixedList(filters MixedListRequest) ([]MixedListItem,
 		if err != nil {
 			return nil, fmt.Errorf("invalid date_to format: %v", err)
 		}
-		// Добавляем время конца дня для корректного фильтра
 		dateTo = dateTo.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 		repoFilters["date_to"] = dateTo
 	}
 
-	// Получаем данные из репозитория
 	mixedData, err := s.repo.GetMixedList(repoFilters)
 	if err != nil {
 		return nil, err
 	}
 
-	// Преобразуем в структурированный ответ
+	return s.convertToMixedListItems(mixedData), nil
+}
+
+// GetMixedListByUser возвращает заявки конкретного пользователя
+func (s *MixingService) GetMixedListByUser(userID uint, filters MixedListRequest) ([]MixedListItem, error) {
+	repoFilters := make(map[string]interface{})
+	repoFilters["creator_id"] = userID
+
+	if filters.DateFrom != "" {
+		dateFrom, err := time.Parse("2006-01-02", filters.DateFrom)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date_from format: %v", err)
+		}
+		repoFilters["date_from"] = dateFrom
+	}
+
+	if filters.DateTo != "" {
+		dateTo, err := time.Parse("2006-01-02", filters.DateTo)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date_to format: %v", err)
+		}
+		dateTo = dateTo.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+		repoFilters["date_to"] = dateTo
+	}
+
+	mixedData, err := s.repo.GetMixedList(repoFilters)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.convertToMixedListItems(mixedData), nil
+}
+
+// convertToMixedListItems конвертирует данные из репозитория
+func (s *MixingService) convertToMixedListItems(mixedData []map[string]interface{}) []MixedListItem {
 	result := make([]MixedListItem, len(mixedData))
 	for i, item := range mixedData {
 		result[i] = MixedListItem{
@@ -135,22 +165,20 @@ func (s *MixingService) GetMixedList(filters MixedListRequest) ([]MixedListItem,
 			AddedWater:     item["added_water"].(float64),
 		}
 
-		// Обрабатываем nullable date_finish
 		if dateFinish, ok := item["date_finish"].(time.Time); ok && !dateFinish.IsZero() {
 			result[i].DateFinish = dateFinish
 		}
 	}
-
-	return result, nil
+	return result
 }
 
+// GetMixedByID получает детали заявки
 func (s *MixingService) GetMixedByID(mixedID uint) (*MixedDetailResponse, error) {
 	mixed, elemMixes, err := s.repo.GetMixedByID(mixedID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Формируем список элементов заявки
 	items := make([]MixedDetailItem, len(elemMixes))
 	for i, elemMix := range elemMixes {
 		items[i] = MixedDetailItem{
@@ -178,7 +206,6 @@ func (s *MixingService) GetMixedByID(mixedID uint) (*MixedDetailResponse, error)
 		Items:          items,
 	}
 
-	// Обрабатываем nullable date_finish
 	if mixed.DateFinish.Valid {
 		response.DateFinish = &mixed.DateFinish.Time
 	}
@@ -186,7 +213,6 @@ func (s *MixingService) GetMixedByID(mixedID uint) (*MixedDetailResponse, error)
 	return response, nil
 }
 
-// Вспомогательная функция для получения логина модератора
 func getModeratorLogin(moderator ds.Users) string {
 	if moderator.ID == 0 {
 		return ""
@@ -194,8 +220,8 @@ func getModeratorLogin(moderator ds.Users) string {
 	return moderator.Login
 }
 
+// UpdateMixed обновляет заявку
 func (s *MixingService) UpdateMixed(mixedID uint, req *UpdateMixedRequest) error {
-	// Валидация бизнес-правил
 	if req.Status != "" {
 		allowedStatuses := []string{"draft", "completed", "pending", "rejected"}
 		validStatus := false
@@ -210,23 +236,22 @@ func (s *MixingService) UpdateMixed(mixedID uint, req *UpdateMixedRequest) error
 		}
 	}
 
-	if req.Ph < 0 || req.Ph > 14 {
+	if req.Ph != 0 && (req.Ph < 0 || req.Ph > 14) {
 		return fmt.Errorf("pH должен быть в диапазоне от 0 до 14")
 	}
 
-	if req.Concentration < 0 {
+	if req.Concentration != 0 && req.Concentration < 0 {
 		return fmt.Errorf("концентрация не может быть отрицательной")
 	}
 
-	if req.TotalVolume < 0 {
+	if req.TotalVolume != 0 && req.TotalVolume < 0 {
 		return fmt.Errorf("общий объем не может быть отрицательным")
 	}
 
-	if req.AddedWater < 0 {
+	if req.AddedWater != 0 && req.AddedWater < 0 {
 		return fmt.Errorf("добавленная вода не может быть отрицательной")
 	}
 
-	// Подготавливаем обновления
 	updates := make(map[string]interface{})
 
 	if req.Status != "" {
@@ -245,49 +270,36 @@ func (s *MixingService) UpdateMixed(mixedID uint, req *UpdateMixedRequest) error
 		updates["added_water"] = req.AddedWater
 	}
 
-	// Если нет полей для обновления
 	if len(updates) == 0 {
 		return fmt.Errorf("нет полей для обновления")
 	}
 
-	// Выполняем обновление
-	err := s.repo.UpdateMixed(mixedID, updates)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.repo.UpdateMixed(mixedID, updates)
 }
 
-// CompleteMixedSimple упрощенная версия формирования заявки
-// CompleteMixed формирует заявку создателем
+// CompleteMixed формирует заявку
 func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (*CompleteMixedResponse, error) {
-	// 1. Проверяем обязательные поля и валидность заявки
 	err := s.repo.ValidateMixedForCompletion(mixedID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Дополнительная бизнес-логика проверки
 	items, err := s.repo.GetMixedItems(mixedID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Проверяем что все элементы имеют корректные объемы
 	for _, item := range items {
 		if item.Volume <= 0 {
 			return nil, fmt.Errorf("объем элемента '%s' должен быть положительным", item.Element.Name)
 		}
 	}
 
-	// 3. Формируем заявку
 	err = s.repo.CompleteMixed(mixedID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Получаем обновленную заявку для ответа
 	updatedMixed, err := s.repo.GetMixedByIDBasic(mixedID)
 	if err != nil {
 		return nil, err
@@ -301,16 +313,15 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 	}, nil
 }
 
+// DeleteMixed удаляет заявку
 func (s *MixingService) DeleteMixed(mixedID uint, req *DeleteMixedRequest) (*DeleteMixedResponse, error) {
 	var err error
 	var message string
 
 	if req != nil && req.HardDelete {
-		// Полное удаление
 		err = s.repo.HardDeleteMixed(mixedID)
 		message = "Заявка полностью удалена"
 	} else {
-		// Soft delete
 		err = s.repo.DeleteMixed(mixedID)
 		message = "Заявка перемещена в архив"
 	}
@@ -329,7 +340,6 @@ func (s *MixingService) DeleteMixed(mixedID uint, req *DeleteMixedRequest) (*Del
 
 // DeleteFromMixed удаляет элемент из заявки
 func (s *MixingService) DeleteFromMixed(mixedID uint, req *DeleteFromMixedRequest) (*DeleteFromMixedResponse, error) {
-	// Валидация
 	if req.ElementID == 0 {
 		return nil, fmt.Errorf("element_id обязателен")
 	}
@@ -338,11 +348,9 @@ func (s *MixingService) DeleteFromMixed(mixedID uint, req *DeleteFromMixedReques
 	var message string
 
 	if req.HardDelete {
-		// Полное удаление
 		err = s.repo.HardDeleteFromMixed(mixedID, req.ElementID)
 		message = "Элемент полностью удален из заявки"
 	} else {
-		// Soft delete
 		err = s.repo.DeleteFromMixed(mixedID, req.ElementID)
 		message = "Элемент удален из заявки"
 	}

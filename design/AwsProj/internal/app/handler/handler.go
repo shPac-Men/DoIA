@@ -4,7 +4,9 @@ import (
 	"AwsProj/internal/app/config"
 	"AwsProj/internal/app/repository"
 	"AwsProj/internal/app/service"
-	"net/http"
+	"AwsProj/internal/pkg/middleware"
+
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -15,73 +17,52 @@ type Handler struct {
 	MixingService  *service.MixingService
 	ElementService *service.ElementService
 	UserService    *service.UserService
-	config         *config.Config // Добавляем конфиг
+	config         *config.Config
+	auth           *middleware.AuthMiddleware // ИЗМЕНИЛИ ТИП
 }
 
 func NewHandler(
 	r *repository.Repository,
-	s *service.MixingService,
-	e *service.ElementService,
-	u *service.UserService,
-	cfg *config.Config, // Добавляем конфиг в конструктор
+	ms *service.MixingService,
+	es *service.ElementService,
+	us *service.UserService,
+	cfg *config.Config,
+	auth *middleware.AuthMiddleware, // ИЗМЕНИЛИ ТИП
 ) *Handler {
 	return &Handler{
 		Repository:     r,
-		MixingService:  s,
-		ElementService: e,
-		UserService:    u,
-		config:         cfg, // Инициализируем конфиг
+		MixingService:  ms,
+		ElementService: es,
+		UserService:    us,
+		config:         cfg,
+		auth:           auth,
 	}
 }
 
 func (h *Handler) RegisterHandler(router *gin.Engine) {
-	// Публичные маршруты (без авторизации)
-	public := router.Group("/api/v1")
+	router.Use(h.auth.GuestAccess()) // h.auth вместо h.app
+
+	api := router.Group("/api/v1")
+
 	{
-		auth := public.Group("/auth")
+		auth := api.Group("/auth")
 		{
-			auth.POST("/login", h.Login)       // Логин - публичный
-			auth.POST("/register", h.Register) // Регистрация - публичная
+			auth.POST("/register", h.Register)
+			auth.POST("/login", h.Login)
 		}
 
-	}
-
-	// Защищенные маршруты (требуют JWT)
-	protected := router.Group("/api/v1")
-	protected.Use(h.WithAuthCheck()) // Применяем middleware ко всей группе
-	{
-		// Элементы (Elements)
-		elements := protected.Group("/elements")
+		elements := api.Group("/elements")
 		{
 			elements.GET("", h.GetAllElements)
 			elements.GET("/:id", h.GetElementById)
-			elements.POST("", h.CreateElement)
-			elements.PUT("/:id", h.UpdateElement)
-			elements.DELETE("/:id", h.DeleteElement)
-			elements.POST("/:id/image", h.UploadImage)
 		}
 
-		// Корзина/Смешивание (Mixing)
-		mixing := protected.Group("/mixing")
-		{
-			mixing.GET("", h.GetMixingPage)
-			mixing.POST("", h.CreateMixing)
-			mixing.POST("/items", h.AddToMixing)
-			mixing.POST("/remove", h.RemoveFromMixing)
-			mixing.GET("/cart-icon", h.GetCartIcon)
-		}
+		api.GET("/ping", h.PingPublic)
+	}
 
-		mixed := protected.Group("/mixed")
-		{
-			mixed.GET("", h.GetMixedList)
-			mixed.GET("/:id", h.GetMixedByID)
-			mixed.PUT("/:id", h.UpdateMixed)
-			mixed.PUT("/:id/complete", h.CompleteMixed)
-			mixed.DELETE("/:id", h.DeleteMixed)
-			mixed.DELETE("/:id/items", h.DeleteFromMixed)
-		}
-
-		// Профиль пользователя (только для авторизованных)
+	protected := api.Group("")
+	protected.Use(h.auth.WithAuthCheck()) // h.auth вместо h.app
+	{
 		auth := protected.Group("/auth")
 		{
 			auth.GET("/profile", h.GetUserProfile)
@@ -89,53 +70,93 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 			auth.POST("/logout", h.Logout)
 		}
 
-		users := protected.Group("/users")
+		mixing := protected.Group("/mixing")
 		{
-			users.GET("/:id", h.GetUserByID)
+			mixing.GET("", h.GetMixingPage)
+			mixing.POST("/items", h.AddToMixing)
+			mixing.POST("/remove", h.RemoveFromMixing)
+			mixing.GET("/cart-icon", h.GetCartIcon)
 		}
 
-		// Ping endpoint (теперь защищенный)
-		protected.GET("/ping", h.Ping)
-
-		// Старые роуты для обратной совместимости
-		protected.GET("/chemistry", h.GetAllElements)
-		protected.GET("/element/:id", h.GetElementById)
+		mixed := protected.Group("/mixed")
+		{
+			mixed.GET("/my", h.GetMyMixedList)
+			mixed.GET("/my/:id", h.GetMyMixedByID)
+		}
 	}
 
-	// HTML роуты (можно оставить публичными или тоже защитить)
-	router.GET("/mixingpage", h.GetMixingPage)
-	router.POST("/create-mixing", h.CreateMixing)
+	admin := api.Group("")
+	admin.Use(h.auth.WithAuthCheck()) // h.auth вместо h.app
+	admin.Use(h.auth.AdminAccess())   // h.auth вместо h.app
+	{
+		elements := admin.Group("/elements")
+		{
+			elements.POST("", h.CreateElement)
+			elements.PUT("/:id", h.UpdateElement)
+			elements.DELETE("/:id", h.DeleteElement)
+			elements.POST("/:id/image", h.UploadImage)
+		}
+
+		mixed := admin.Group("/mixed")
+		{
+			mixed.GET("", h.GetMixedList)
+			mixed.GET("/:id", h.GetMixedByID)
+			mixed.POST("", h.CreateMixing)
+			mixed.PUT("/:id", h.UpdateMixed)
+			mixed.PUT("/:id/complete", h.CompleteMixed)
+			mixed.DELETE("/:id/items", h.DeleteFromMixed)
+			mixed.DELETE("/:id", h.DeleteMixed)
+		}
+
+		users := admin.Group("/users")
+		{
+			users.GET("", h.GetAllUsers)
+			users.GET("/:id", h.GetUserByID)
+			users.PUT("/:id/role", h.UpdateUserRole)
+		}
+	}
+
+	h.RegisterStatic(router)
 }
 
-// RegisterStatic регистрирует статические файлы
-func (h *Handler) RegisterStatic(router *gin.Engine) {
-	router.LoadHTMLGlob("../../templates/*")
-	router.Static("/static", "../../resources")
-	router.Static("/img", "resources/img")
-}
+func (h *Handler) PingPublic(gCtx *gin.Context) {
+	role := h.auth.GetUserRole(gCtx) // h.auth вместо h.app
+	userID := h.auth.GetUserID(gCtx) // h.auth вместо h.app
 
-// errorHandler для обработки ошибок
-func (h *Handler) errorHandler(ctx *gin.Context, errorStatusCode int, err error) {
-	logrus.Error(err.Error())
-	ctx.JSON(errorStatusCode, gin.H{
-		"status":      "error",
-		"description": err.Error(),
+	gCtx.JSON(200, PingResponse{
+		Status:  true,
+		Auth:    userID != 0,
+		UserID:  userID,
+		Role:    role,
+		Message: "Service is working",
 	})
 }
 
-// Ping godoc
-// @Summary Ping endpoint
-// @Description Check if service is working and user is authenticated
-// @Tags utils
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} PingResponse
-// @Failure 403 {object} ErrorResponse
-// @Router /ping [get]
 func (h *Handler) Ping(gCtx *gin.Context) {
-	gCtx.JSON(http.StatusOK, PingResponse{
-		Auth:    true,
+	userID := h.auth.GetUserID(gCtx)   // h.auth вместо h.app
+	role := h.auth.GetUserRole(gCtx)   // h.auth вместо h.app
+	login := h.auth.GetUserLogin(gCtx) // h.auth вместо h.app
+
+	gCtx.JSON(200, PingResponse{
 		Status:  true,
-		Message: "Service is working and user is authenticated",
+		Auth:    true,
+		UserID:  userID,
+		Role:    role,
+		Message: fmt.Sprintf("Authenticated as %s (%s)", login, role),
+	})
+}
+
+func (h *Handler) RegisterStatic(router *gin.Engine) {
+	//router.LoadHTMLGlob("templates/*")
+	router.Static("/static", "resources/styles")
+	router.Static("/img", "resources/img")
+}
+
+func (h *Handler) errorHandler(ctx *gin.Context, errorStatusCode int, err error) {
+	logrus.Error(err.Error())
+	ctx.JSON(errorStatusCode, ErrorResponse{
+		Success: false,
+		Error:   "Error",
+		Message: err.Error(),
 	})
 }

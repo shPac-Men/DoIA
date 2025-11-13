@@ -1,18 +1,29 @@
 package service
 
 import (
+	"AwsProj/internal/app/config"
 	"AwsProj/internal/app/ds"
 	"AwsProj/internal/app/repository"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
-	repo *repository.Repository
+	repo   *repository.Repository
+	config *config.Config
 }
 
-func NewUserService(repo *repository.Repository) *UserService {
-	return &UserService{repo: repo}
+// NewUserService - конструктор с двумя параметрами
+func NewUserService(repo *repository.Repository, cfg *config.Config) *UserService {
+	return &UserService{
+		repo:   repo,
+		config: cfg,
+	}
 }
 
 // Register регистрирует нового пользователя
@@ -36,11 +47,17 @@ func (s *UserService) Register(req *RegisterRequest) (*RegisterResponse, error) 
 		return nil, errors.New("пользователь с таким логином уже существует")
 	}
 
-	// Создаем пользователя (пароль хранится как есть)
+	// Хешируем пароль
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка хеширования пароля: %v", err)
+	}
+
+	// Создаем пользователя
 	user := &ds.Users{
 		Login:       req.Login,
-		Password:    req.Password, // без хеширования
-		IsModerator: req.IsModerator,
+		Password:    string(hashedPassword), // Сохраняем хешированный пароль
+		IsModerator: false,                  // По умолчанию не модератор
 	}
 
 	err = s.repo.CreateUser(user)
@@ -56,33 +73,146 @@ func (s *UserService) Register(req *RegisterRequest) (*RegisterResponse, error) 
 	}, nil
 }
 
+// Login выполняет аутентификацию пользователя
+func (s *UserService) Login(req *LoginRequest) (*LoginResponse, error) {
+	// Валидация
+	if req.Login == "" {
+		return nil, errors.New("логин обязателен")
+	}
+	if req.Password == "" {
+		return nil, errors.New("пароль обязателен")
+	}
+
+	// Ищем пользователя по логину
+	user, err := s.repo.GetUserByLogin(req.Login)
+	if err != nil {
+		return nil, errors.New("неверный логин или пароль")
+	}
+
+	// Проверяем пароль с помощью bcrypt
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, errors.New("неверный логин или пароль")
+	}
+
+	// Определяем роль
+	role := "visitor"
+	if user.IsModerator {
+		role = "admin"
+	}
+
+	// Генерируем JWT токен
+	token, err := s.generateJWT(user.ID, user.Login, role, user.IsModerator)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка генерации токена: %w", err)
+	}
+
+	return &LoginResponse{
+		Token:       token,
+		ID:          user.ID,
+		Login:       user.Login,
+		Role:        role,
+		IsModerator: user.IsModerator,
+		Message:     "Успешная аутентификация",
+	}, nil
+}
+
+// generateJWT генерирует JWT токен
+func (s *UserService) generateJWT(userID uint, login string, role string, isModerator bool) (string, error) {
+	expiresIn := s.config.JWT.ExpiresIn
+	if expiresIn == 0 {
+		expiresIn = 24 * time.Hour
+	}
+
+	claims := &ds.JWTClaims{
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(expiresIn).Unix(),
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    "AwsProj",
+			Subject:   fmt.Sprintf("%d", userID),
+		},
+		UserID:      userID,
+		UserUUID:    uuid.New(),
+		Login:       login,
+		Role:        role,
+		IsModerator: isModerator,
+		Scopes:      []string{"user"},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(s.config.JWT.Token))
+}
+
+// GetUserProfile возвращает профиль пользователя
 func (s *UserService) GetUserProfile(userID uint) (*UserProfileResponse, error) {
 	user, err := s.repo.GetUserByID(userID)
 	if err != nil {
 		return nil, err
 	}
 
+	role := "visitor"
+	if user.IsModerator {
+		role = "admin"
+	}
+
 	return &UserProfileResponse{
 		ID:          user.ID,
 		Login:       user.Login,
+		Role:        role,
 		IsModerator: user.IsModerator,
 	}, nil
 }
 
-// GetUserByID возвращает данные любого пользователя по ID
+// GetUserByID возвращает данные пользователя по ID
 func (s *UserService) GetUserByID(userID uint) (*UserProfileResponse, error) {
 	user, err := s.repo.GetUserByID(userID)
 	if err != nil {
 		return nil, err
 	}
 
+	role := "visitor"
+	if user.IsModerator {
+		role = "admin"
+	}
+
 	return &UserProfileResponse{
 		ID:          user.ID,
 		Login:       user.Login,
+		Role:        role,
 		IsModerator: user.IsModerator,
 	}, nil
 }
 
+// GetUserByLogin возвращает пользователя по логину
+func (s *UserService) GetUserByLogin(login string) (*ds.Users, error) {
+	return s.repo.GetUserByLogin(login)
+}
+
+// GetAllUsers возвращает всех пользователей
+func (s *UserService) GetAllUsers() ([]*UserProfileResponse, error) {
+	users, err := s.repo.GetAllUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*UserProfileResponse, len(users))
+	for i, user := range users {
+		role := "visitor"
+		if user.IsModerator {
+			role = "admin"
+		}
+
+		result[i] = &UserProfileResponse{
+			ID:          user.ID,
+			Login:       user.Login,
+			Role:        role,
+			IsModerator: user.IsModerator,
+		}
+	}
+
+	return result, nil
+}
+
+// UpdateUser обновляет данные пользователя
 func (s *UserService) UpdateUser(userID uint, req *UpdateUserRequest) error {
 	// Валидация
 	if req.Login != "" {
@@ -113,7 +243,12 @@ func (s *UserService) UpdateUser(userID uint, req *UpdateUserRequest) error {
 		updates["login"] = req.Login
 	}
 	if req.Password != "" {
-		updates["password"] = req.Password // без хеширования для учебного проекта
+		// Хешируем новый пароль
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("ошибка хеширования пароля: %v", err)
+		}
+		updates["password"] = string(hashedPassword)
 	}
 
 	// Если нет полей для обновления
@@ -130,45 +265,15 @@ func (s *UserService) UpdateUser(userID uint, req *UpdateUserRequest) error {
 	return nil
 }
 
-func (s *UserService) Login(req *LoginRequest) (*LoginResponse, error) {
-	// Валидация
-	if req.Login == "" {
-		return nil, errors.New("логин обязателен")
-	}
-	if req.Password == "" {
-		return nil, errors.New("пароль обязателен")
-	}
-
-	// Ищем пользователя по логину
-	user, err := s.repo.GetUserByLogin(req.Login)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, errors.New("неверный логин или пароль")
-	}
-
-	// Проверяем пароль (без хеширования для учебного проекта)
-	if user.Password != req.Password {
-		return nil, errors.New("неверный логин или пароль")
-	}
-
-	return &LoginResponse{
-		ID:          user.ID,
-		Login:       user.Login,
-		IsModerator: user.IsModerator,
-		Message:     "Успешная аутентификация",
-	}, nil
+// UpdateUserRole обновляет роль пользователя
+func (s *UserService) UpdateUserRole(userID uint, isModerator bool) error {
+	return s.repo.UpdateUserRole(userID, isModerator)
 }
 
 // Logout выполняет деавторизацию пользователя
 func (s *UserService) Logout(userID uint) (*LogoutResponse, error) {
-	// В реальном приложении здесь может быть:
-	// - Добавление токена в blacklist
-	// - Удаление сессии из базы
-	// - Очистка кэша
-
-	// Для учебного проекта просто возвращаем успех
+	// В JWT-based системе logout происходит на клиенте
+	// Здесь можно добавить blacklist токенов в Redis
 	return &LogoutResponse{
 		Message: "Успешный выход из системы",
 	}, nil

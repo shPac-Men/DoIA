@@ -28,13 +28,14 @@ func (r *Repository) GetUserByLogin(login string) (*ds.Users, error) {
 	err := r.db.Where("login = ?", login).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, fmt.Errorf("пользователь не найден")
 		}
 		return nil, err
 	}
 	return &user, nil
 }
 
+// GetUserByID возвращает пользователя по ID
 func (r *Repository) GetUserByID(userID uint) (*ds.Users, error) {
 	var user ds.Users
 	err := r.db.Where("id = ?", userID).First(&user).Error
@@ -45,6 +46,16 @@ func (r *Repository) GetUserByID(userID uint) (*ds.Users, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// GetAllUsers возвращает всех пользователей
+func (r *Repository) GetAllUsers() ([]*ds.Users, error) {
+	var users []*ds.Users
+	err := r.db.Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // UpdateUser обновляет данные пользователя
@@ -68,6 +79,13 @@ func (r *Repository) UpdateUser(userID uint, updates map[string]interface{}) err
 	}
 
 	return nil
+}
+
+// UpdateUserRole обновляет роль пользователя (is_moderator)
+func (r *Repository) UpdateUserRole(userID uint, isModerator bool) error {
+	return r.db.Model(&ds.Users{}).
+		Where("id = ?", userID).
+		Update("is_moderator", isModerator).Error
 }
 
 // CheckLoginExists проверяет существование логина у других пользователей
