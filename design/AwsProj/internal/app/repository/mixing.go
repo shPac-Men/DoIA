@@ -133,7 +133,7 @@ func (r *Repository) GetMixedByID(mixedID uint) (*ds.Mixed, []ds.ElemMix, error)
 
 	// Ищем заявку с предзагрузкой создателя и модератора
 	err := r.db.Preload("Creator").Preload("Moderator").
-		Where("id = ? AND status != ? AND status != ?", mixedID, "draft", "deleted").
+		Where("id = ? AND status != ?", mixedID, "deleted").
 		First(&mixed).Error
 
 	if err != nil {

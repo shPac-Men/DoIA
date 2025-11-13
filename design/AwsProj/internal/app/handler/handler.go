@@ -84,8 +84,8 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 
 		mixed := protected.Group("/mixed")
 		{
-			mixed.GET("/my", h.GetMyMixedList)
-			mixed.GET("/my/:id", h.GetMyMixedByID)
+			mixed.GET("my", h.GetMyMixedList)
+			mixed.GET("my/:id", h.GetMyMixedByID)
 		}
 	}
 
