@@ -4,6 +4,7 @@ import (
 	"AwsProj/internal/app/service"
 	"net/http"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,6 +35,22 @@ func (h *Handler) Login(gCtx *gin.Context) {
 		return
 	}
 
+	// Сохраняем сессию в Redis (для браузера через куку)
+	session := sessions.Default(gCtx)
+	session.Set("user_id", loginResp.ID)
+	session.Set("login", loginResp.Login)
+	session.Set("role", loginResp.Role)
+	session.Set("is_moderator", loginResp.IsModerator)
+	if err := session.Save(); err != nil {
+		gCtx.JSON(http.StatusInternalServerError, ErrorResponse{
+			Success: false,
+			Error:   "Session save failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Возвращаем JWT для REST клиентов
 	gCtx.JSON(http.StatusOK, LoginResponse{
 		Token:     loginResp.Token,
 		ExpiresIn: 24 * 60 * 60 * 1000,
@@ -62,7 +79,6 @@ func (h *Handler) Register(gCtx *gin.Context) {
 	serviceReq := &service.RegisterRequest{
 		Login:    req.Login,
 		Password: req.Password,
-		// Email УДАЛЁН
 	}
 
 	registerResp, err := h.UserService.Register(serviceReq)
@@ -81,13 +97,17 @@ func (h *Handler) Register(gCtx *gin.Context) {
 		User: UserInfo{
 			ID:    registerResp.ID,
 			Login: registerResp.Login,
-			// Email УДАЛЁН
 		},
 	})
 }
 
 // Logout - выход
 func (h *Handler) Logout(gCtx *gin.Context) {
+	session := sessions.Default(gCtx)
+	session.Clear()
+	session.Options(sessions.Options{MaxAge: -1})
+	session.Save()
+
 	gCtx.JSON(http.StatusOK, SuccessResponse{
 		Success: true,
 		Message: "Logged out successfully",

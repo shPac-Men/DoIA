@@ -305,16 +305,12 @@ func (r *Repository) CountCartItems(ctx context.Context, cartID int) (int, error
 
 // GetCartIconInfo возвращает информацию для иконки корзины
 func (r *Repository) GetCartIconInfo(userID int) (int, int, error) {
-	// Используем хардкод как в вашем GetCartCount
-	hardcodedUserID := 1
-
-	// Получаем или создаем корзину
-	cart, err := r.GetOrCreateUserDraftOrder(context.Background(), hardcodedUserID)
+	// ✅ ИСПОЛЬЗУЙТЕ ПЕРЕДАННЫЙ userID
+	cart, err := r.GetOrCreateUserDraftOrder(context.Background(), userID)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	// Считаем элементы корзины
 	itemsCount, err := r.CountCartItems(context.Background(), int(cart.ID))
 	if err != nil {
 		return 0, 0, err
