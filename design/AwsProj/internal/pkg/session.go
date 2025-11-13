@@ -20,13 +20,11 @@ func NewRedisSessionStore(cfg *config.RedisConfig) (sessions.Store, error) {
 	logrus.Infof("   Address: %s", addr)
 	logrus.Infof("   Password: '%s' (length: %d)", cfg.Password, len(cfg.Password))
 
-	// Создайте Redis клиент напрямую
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: cfg.Password,
 	})
 
-	// Проверьте подключение
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -37,10 +35,33 @@ func NewRedisSessionStore(cfg *config.RedisConfig) (sessions.Store, error) {
 
 	logrus.Info("✅ Redis connection successful")
 
-	// Если нужен session store, используйте cookie store
-	// или ищите совместимый redis session store для go-redis
+	// Используем cookie store для session
 	store := cookie.NewStore([]byte(cfg.SecretKey))
 
 	logrus.Info("✅ Session store created successfully")
 	return store, nil
+}
+
+// NewRedisClientForTokens создает отдельный Redis клиент для хранения токенов
+func NewRedisClientForTokens(cfg *config.RedisConfig) (*redis.Client, error) {
+	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
+
+	logrus.Infof("🔧 Creating Redis client for tokens:")
+	logrus.Infof("   Address: %s", addr)
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: cfg.Password,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := client.Ping(ctx).Err(); err != nil {
+		logrus.Errorf("❌ Redis ping failed: %v", err)
+		return nil, err
+	}
+
+	logrus.Info("✅ Redis client for tokens created successfully")
+	return client, nil
 }

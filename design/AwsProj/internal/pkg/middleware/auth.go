@@ -1,12 +1,13 @@
 package middleware
 
-// internal/app/middleware/auth.go
-
 import (
 	"AwsProj/internal/app/config"
 	"AwsProj/internal/app/ds"
+	"AwsProj/internal/pkg"
+	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
@@ -16,11 +17,15 @@ import (
 const jwtPrefix = "Bearer "
 
 type AuthMiddleware struct {
-	Config *config.Config
+	Config            *config.Config
+	RedisTokenService *pkg.RedisTokenService
 }
 
-func NewAuthMiddleware(cfg *config.Config) *AuthMiddleware {
-	return &AuthMiddleware{Config: cfg}
+func NewAuthMiddleware(cfg *config.Config, tokenService *pkg.RedisTokenService) *AuthMiddleware {
+	return &AuthMiddleware{
+		Config:            cfg,
+		RedisTokenService: tokenService,
+	}
 }
 
 // GuestAccess - позволяет доступ всем, устанавливает роль "guest" если нет токена
@@ -45,6 +50,20 @@ func (m *AuthMiddleware) GuestAccess() gin.HandlerFunc {
 
 		if err != nil || !token.Valid {
 			logrus.Warnf("Invalid token in GuestAccess: %v", err)
+			gCtx.Set("user_id", uint(0))
+			gCtx.Set("role", "guest")
+			gCtx.Set("is_moderator", false)
+			gCtx.Next()
+			return
+		}
+
+		// Проверяем наличие токена в Redis
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		_, err = m.RedisTokenService.GetToken(ctx, claims.UserID)
+		if err != nil {
+			logrus.Warnf("Token not found in Redis or revoked: %v", err)
 			gCtx.Set("user_id", uint(0))
 			gCtx.Set("role", "guest")
 			gCtx.Set("is_moderator", false)
@@ -92,6 +111,20 @@ func (m *AuthMiddleware) WithAuthCheck() gin.HandlerFunc {
 			gCtx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "Invalid token",
 				"message": "Token validation failed",
+			})
+			return
+		}
+
+		// Проверяем наличие токена в Redis
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		storedToken, err := m.RedisTokenService.GetToken(ctx, claims.UserID)
+		if err != nil || storedToken != jwtStr {
+			logrus.Warnf("Token not found in Redis or doesn't match: %v", err)
+			gCtx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error":   "Invalid token",
+				"message": "Token has been revoked or expired",
 			})
 			return
 		}

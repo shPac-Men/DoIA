@@ -25,6 +25,7 @@ func main() {
 
 	router := gin.Default()
 
+	// CORS Middleware - ПЕРВЫЙ
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -42,7 +43,6 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("❌ Config error: %v", err)
 	}
-	logrus.Info("✅ Config loaded")
 
 	// Database
 	postgresString := dsn.FromEnv()
@@ -58,17 +58,27 @@ func main() {
 	redisConfig := config.NewRedisConfig()
 	logrus.Infof("✅ Redis config: %s:%s", redisConfig.Host, redisConfig.Port)
 
-	logrus.Infof("DEBUG Redis Password: '%s' (length: %d)",
-		redisConfig.Password,
-		len(redisConfig.Password))
-	logrus.Infof("DEBUG Redis SecretKey: '%s'", redisConfig.SecretKey)
+	// Redis Client for Tokens
+	redisClient, err := pkg.NewRedisClientForTokens(redisConfig)
+	if err != nil {
+		logrus.Fatalf("❌ Redis client error: %v", err)
+	}
+	logrus.Info("✅ Redis client initialized")
+
+	// Redis Token Service
+	redisTokenService := pkg.NewRedisTokenService(redisClient)
+	logrus.Info("✅ RedisTokenService initialized")
 
 	// Redis Session Store
 	store, err := pkg.NewRedisSessionStore(redisConfig)
 	if err != nil {
-		logrus.Fatalf("❌ Redis error: %v", err)
+		logrus.Fatalf("❌ Session store error: %v", err)
 	}
-	logrus.Info("✅ Redis session store initialized")
+	logrus.Info("✅ Session store initialized")
+
+	// ⭐ Redis Session Middleware - ВТОРОЙ (ДО ВСЕХ ХЕНДЛЕРОВ)
+	router.Use(middleware.RedisSessionMiddleware(store))
+	logrus.Info("✅ Session middleware registered")
 
 	// Services
 	userService := service.NewUserService(rep, conf)
@@ -90,26 +100,35 @@ func main() {
 	logrus.Info("✅ ElementService initialized")
 
 	// Middleware
-	authMiddleware := middleware.NewAuthMiddleware(conf)
+	authMiddleware := middleware.NewAuthMiddleware(conf, redisTokenService)
 	logrus.Info("✅ AuthMiddleware initialized")
 
 	// Handler
-	hand := handler.NewHandler(rep, mixingService, elementService, userService, conf, authMiddleware)
+	hand := handler.NewHandler(
+		rep,
+		mixingService,
+		elementService,
+		userService,
+		conf,
+		authMiddleware,
+		redisTokenService,
+	)
 	logrus.Info("✅ Handler initialized")
 
-	// Redis session middleware
-	router.Use(middleware.RedisSessionMiddleware(store))
-	logrus.Info("✅ Redis session middleware registered")
-
-	// Application
-	application := pkg.NewApp(conf, router, hand, store)
-	logrus.Info("✅ Application created")
+	// Register Routes
+	hand.RegisterHandler(router)
+	logrus.Info("✅ Routes registered")
 
 	// Swagger
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	logrus.Info("✅ Swagger at /swagger/index.html")
 
+	// Построение адреса сервера из конфига
+	serverAddr := fmt.Sprintf("%s:%d", conf.ServiceHost, conf.ServicePort)
+
 	// Run
-	logrus.Info("🚀 Starting server...")
-	application.RunApp()
+	logrus.Infof("🚀 Starting server on %s...", serverAddr)
+	if err := router.Run(serverAddr); err != nil {
+		logrus.Fatalf("❌ Server error: %v", err)
+	}
 }

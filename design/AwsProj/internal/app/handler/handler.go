@@ -4,6 +4,7 @@ import (
 	"AwsProj/internal/app/config"
 	"AwsProj/internal/app/repository"
 	"AwsProj/internal/app/service"
+	"AwsProj/internal/pkg"
 	"AwsProj/internal/pkg/middleware"
 
 	"fmt"
@@ -13,12 +14,13 @@ import (
 )
 
 type Handler struct {
-	Repository     *repository.Repository
-	MixingService  *service.MixingService
-	ElementService *service.ElementService
-	UserService    *service.UserService
-	config         *config.Config
-	auth           *middleware.AuthMiddleware // ИЗМЕНИЛИ ТИП
+	Repository        *repository.Repository
+	MixingService     *service.MixingService
+	ElementService    *service.ElementService
+	UserService       *service.UserService
+	config            *config.Config
+	auth              *middleware.AuthMiddleware
+	redisTokenService *pkg.RedisTokenService // ДОБАВЛЕНО
 }
 
 func NewHandler(
@@ -27,20 +29,22 @@ func NewHandler(
 	es *service.ElementService,
 	us *service.UserService,
 	cfg *config.Config,
-	auth *middleware.AuthMiddleware, // ИЗМЕНИЛИ ТИП
+	auth *middleware.AuthMiddleware,
+	redisTokenService *pkg.RedisTokenService, // ДОБАВЛЕНО
 ) *Handler {
 	return &Handler{
-		Repository:     r,
-		MixingService:  ms,
-		ElementService: es,
-		UserService:    us,
-		config:         cfg,
-		auth:           auth,
+		Repository:        r,
+		MixingService:     ms,
+		ElementService:    es,
+		UserService:       us,
+		config:            cfg,
+		auth:              auth,
+		redisTokenService: redisTokenService, // ДОБАВЛЕНО
 	}
 }
 
 func (h *Handler) RegisterHandler(router *gin.Engine) {
-	router.Use(h.auth.GuestAccess()) // h.auth вместо h.app
+	router.Use(h.auth.GuestAccess())
 
 	api := router.Group("/api/v1")
 
@@ -61,7 +65,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 	}
 
 	protected := api.Group("")
-	protected.Use(h.auth.WithAuthCheck()) // h.auth вместо h.app
+	protected.Use(h.auth.WithAuthCheck())
 	{
 		auth := protected.Group("/auth")
 		{
@@ -86,8 +90,8 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 	}
 
 	admin := api.Group("")
-	admin.Use(h.auth.WithAuthCheck()) // h.auth вместо h.app
-	admin.Use(h.auth.AdminAccess())   // h.auth вместо h.app
+	admin.Use(h.auth.WithAuthCheck())
+	admin.Use(h.auth.AdminAccess())
 	{
 		elements := admin.Group("/elements")
 		{
@@ -120,8 +124,8 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 }
 
 func (h *Handler) PingPublic(gCtx *gin.Context) {
-	role := h.auth.GetUserRole(gCtx) // h.auth вместо h.app
-	userID := h.auth.GetUserID(gCtx) // h.auth вместо h.app
+	role := h.auth.GetUserRole(gCtx)
+	userID := h.auth.GetUserID(gCtx)
 
 	gCtx.JSON(200, PingResponse{
 		Status:  true,
@@ -133,9 +137,9 @@ func (h *Handler) PingPublic(gCtx *gin.Context) {
 }
 
 func (h *Handler) Ping(gCtx *gin.Context) {
-	userID := h.auth.GetUserID(gCtx)   // h.auth вместо h.app
-	role := h.auth.GetUserRole(gCtx)   // h.auth вместо h.app
-	login := h.auth.GetUserLogin(gCtx) // h.auth вместо h.app
+	userID := h.auth.GetUserID(gCtx)
+	role := h.auth.GetUserRole(gCtx)
+	login := h.auth.GetUserLogin(gCtx)
 
 	gCtx.JSON(200, PingResponse{
 		Status:  true,
@@ -147,7 +151,6 @@ func (h *Handler) Ping(gCtx *gin.Context) {
 }
 
 func (h *Handler) RegisterStatic(router *gin.Engine) {
-	//router.LoadHTMLGlob("templates/*")
 	router.Static("/static", "resources/styles")
 	router.Static("/img", "resources/img")
 }

@@ -2,10 +2,13 @@ package handler
 
 import (
 	"AwsProj/internal/app/service"
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // Login - аутентификация
@@ -34,6 +37,23 @@ func (h *Handler) Login(gCtx *gin.Context) {
 		})
 		return
 	}
+
+	// Сохраняем JWT в Redis с TTL
+	ctx, cancel := context.WithTimeout(gCtx.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	tokenTTL := 24 * time.Hour
+	if err := h.redisTokenService.SaveToken(ctx, loginResp.ID, loginResp.Token, tokenTTL); err != nil {
+		logrus.Errorf("❌ Failed to save token to Redis: %v", err)
+		gCtx.JSON(http.StatusInternalServerError, ErrorResponse{
+			Success: false,
+			Error:   "Token save failed",
+			Message: "Failed to save authentication token",
+		})
+		return
+	}
+
+	logrus.Infof("✅ Token saved to Redis for user %d", loginResp.ID)
 
 	// Сохраняем сессию в Redis (для браузера через куку)
 	session := sessions.Default(gCtx)
@@ -92,7 +112,6 @@ func (h *Handler) Register(gCtx *gin.Context) {
 	}
 
 	gCtx.JSON(http.StatusOK, RegisterResponse{
-		//Success: true,
 		Message: "Пользователь успешно зарегистрирован",
 		User: UserInfo{
 			ID:    registerResp.ID,
@@ -103,6 +122,22 @@ func (h *Handler) Register(gCtx *gin.Context) {
 
 // Logout - выход
 func (h *Handler) Logout(gCtx *gin.Context) {
+	userID := h.auth.GetUserID(gCtx)
+
+	// Отзываем JWT из Redis
+	if userID != 0 {
+		ctx, cancel := context.WithTimeout(gCtx.Request.Context(), 5*time.Second)
+		defer cancel()
+
+		if err := h.redisTokenService.RevokeToken(ctx, userID); err != nil {
+			logrus.Warnf("⚠️ Failed to revoke token from Redis: %v", err)
+			// Не возвращаем ошибку - продолжаем логаут
+		} else {
+			logrus.Infof("✅ Token revoked for user %d", userID)
+		}
+	}
+
+	// Очищаем сессию
 	session := sessions.Default(gCtx)
 	session.Clear()
 	session.Options(sessions.Options{MaxAge: -1})
