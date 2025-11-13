@@ -28,54 +28,6 @@ func NewUserService(repo *repository.Repository, cfg *config.Config) *UserServic
 
 // Register регистрирует нового пользователя
 func (s *UserService) Register(req *RegisterRequest) (*RegisterResponse, error) {
-	// Валидация логина
-	if len(req.Login) < 3 || len(req.Login) > 25 {
-		return nil, errors.New("логин должен быть от 3 до 25 символов")
-	}
-
-	// Валидация пароля
-	if len(req.Password) < 6 {
-		return nil, errors.New("пароль должен быть не менее 6 символов")
-	}
-
-	// Проверяем уникальность логина
-	exists, err := s.repo.CheckUserExists(req.Login)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка проверки пользователя: %v", err)
-	}
-	if exists {
-		return nil, errors.New("пользователь с таким логином уже существует")
-	}
-
-	// Хешируем пароль
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка хеширования пароля: %v", err)
-	}
-
-	// Создаем пользователя
-	user := &ds.Users{
-		Login:       req.Login,
-		Password:    string(hashedPassword), // Сохраняем хешированный пароль
-		IsModerator: false,                  // По умолчанию не модератор
-	}
-
-	err = s.repo.CreateUser(user)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка создания пользователя: %v", err)
-	}
-
-	return &RegisterResponse{
-		ID:          user.ID,
-		Login:       user.Login,
-		IsModerator: user.IsModerator,
-		Message:     "Пользователь успешно зарегистрирован",
-	}, nil
-}
-
-// Login выполняет аутентификацию пользователя
-func (s *UserService) Login(req *LoginRequest) (*LoginResponse, error) {
-	// Валидация
 	if req.Login == "" {
 		return nil, errors.New("логин обязателен")
 	}
@@ -83,24 +35,52 @@ func (s *UserService) Login(req *LoginRequest) (*LoginResponse, error) {
 		return nil, errors.New("пароль обязателен")
 	}
 
-	// Ищем пользователя по логину
+	_, err := s.repo.GetUserByLogin(req.Login)
+	if err == nil {
+		return nil, errors.New("пользователь с таким логином уже существует")
+	}
+
+	user := &ds.Users{
+		Login:       req.Login,
+		Password:    req.Password,
+		IsModerator: false,
+	}
+
+	createdUser, err := s.repo.CreateUser(user)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при создании пользователя: %w", err)
+	}
+
+	return &RegisterResponse{
+		ID:    createdUser.ID,
+		Login: createdUser.Login,
+	}, nil
+}
+
+// Login выполняет аутентификацию пользователя
+func (s *UserService) Login(req *LoginRequest) (*LoginResponse, error) {
+	if req.Login == "" {
+		return nil, errors.New("логин обязателен")
+	}
+	if req.Password == "" {
+		return nil, errors.New("пароль обязателен")
+	}
+
 	user, err := s.repo.GetUserByLogin(req.Login)
 	if err != nil {
 		return nil, errors.New("неверный логин или пароль")
 	}
 
-	// Проверяем пароль с помощью bcrypt
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	// Сравниваем пароли напрямую (без bcrypt)
+	if user.Password != req.Password {
 		return nil, errors.New("неверный логин или пароль")
 	}
 
-	// Определяем роль
 	role := "visitor"
 	if user.IsModerator {
 		role = "admin"
 	}
 
-	// Генерируем JWT токен
 	token, err := s.generateJWT(user.ID, user.Login, role, user.IsModerator)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка генерации токена: %w", err)

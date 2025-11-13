@@ -19,7 +19,6 @@ func (h *Handler) Login(gCtx *gin.Context) {
 		return
 	}
 
-	// Конвертируем в service request
 	serviceReq := &service.LoginRequest{
 		Login:    req.Login,
 		Password: req.Password,
@@ -63,16 +62,12 @@ func (h *Handler) Register(gCtx *gin.Context) {
 	serviceReq := &service.RegisterRequest{
 		Login:    req.Login,
 		Password: req.Password,
+		// Email УДАЛЁН
 	}
 
 	registerResp, err := h.UserService.Register(serviceReq)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if err.Error() == "пользователь с таким логином уже существует" {
-			status = http.StatusConflict
-		}
-
-		gCtx.JSON(status, ErrorResponse{
+		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
 			Success: false,
 			Error:   "Registration failed",
 			Message: err.Error(),
@@ -80,14 +75,14 @@ func (h *Handler) Register(gCtx *gin.Context) {
 		return
 	}
 
-	gCtx.JSON(http.StatusCreated, RegisterResponse{
+	gCtx.JSON(http.StatusOK, RegisterResponse{
+		//Success: true,
+		Message: "Пользователь успешно зарегистрирован",
 		User: UserInfo{
-			ID:          registerResp.ID,
-			Login:       registerResp.Login,
-			Role:        "visitor",
-			IsModerator: registerResp.IsModerator,
+			ID:    registerResp.ID,
+			Login: registerResp.Login,
+			// Email УДАЛЁН
 		},
-		Message: registerResp.Message,
 	})
 }
 

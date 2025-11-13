@@ -9,8 +9,12 @@ import (
 )
 
 // CreateUser создает нового пользователя
-func (r *Repository) CreateUser(user *ds.Users) error {
-	return r.db.Create(user).Error
+// repository/user.go
+func (r *Repository) CreateUser(user *ds.Users) (*ds.Users, error) {
+	if err := r.db.Create(user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // CheckUserExists проверяет существование пользователя по логину
