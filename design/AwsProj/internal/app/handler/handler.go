@@ -61,6 +61,11 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 			elements.GET("/:id", h.GetElementById)
 		}
 
+		mixing := api.Group("/mixing")
+		{
+			mixing.GET("/cart-icon", h.GetCartIcon)
+		}
+
 		api.GET("/ping", h.PingPublic)
 	}
 
@@ -79,7 +84,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 			mixing.GET("", h.GetMixingPage)
 			mixing.POST("/items", h.AddToMixing)
 			mixing.POST("/remove", h.RemoveFromMixing)
-			mixing.GET("/cart-icon", h.GetCartIcon)
+			//mixing.GET("/cart-icon", h.GetCartIcon)
 		}
 
 		mixed := protected.Group("/mixed")

@@ -13,6 +13,17 @@ import (
 )
 
 // GetAllElements получение всех элементов
+
+// GetAllElements godoc
+// @Summary Get all elements
+// @Description Get list of all elements with optional search by name
+// @Tags elements
+// @Accept json
+// @Produce json
+// @Param query query string false "Search query by element name"
+// @Success 200 {object} map[string]interface{} "Success response with elements list"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /elements [get]
 func (h *Handler) GetAllElements(ctx *gin.Context) {
 	var elements []ds.Elements
 	var err error
@@ -58,6 +69,19 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 }
 
 // GetElementById получение элемента по ID
+
+// GetElementById godoc
+// @Summary Get element by ID
+// @Description Retrieve a specific element by its ID
+// @Tags elements
+// @Accept json
+// @Produce json
+// @Param id path int true "Element ID"
+// @Success 200 {object} SuccessResponse "Element found"
+// @Failure 400 {object} ErrorResponse "Invalid ID format"
+// @Failure 404 {object} ErrorResponse "Element not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /elements/{id} [get]
 func (h *Handler) GetElementById(ctx *gin.Context) {
 	strId := ctx.Param("id")
 	id, err := strconv.Atoi(strId)
@@ -98,6 +122,22 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 }
 
 // CreateElement создание элемента (только для админов)
+
+// CreateElement godoc
+// @Summary Create new element
+// @Description Create a new chemical element (Admin only)
+// @Tags elements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateElementRequest true "Element data"
+// @Success 201 {object} SuccessResponse "Element created successfully"
+// @Failure 400 {object} ErrorResponse "Invalid request data or validation error"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
+// @Failure 409 {object} ErrorResponse "Element already exists"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /elements [post]
 func (h *Handler) CreateElement(ctx *gin.Context) {
 	var req CreateElementRequest
 
@@ -143,6 +183,24 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 }
 
 // UpdateElement обновление элемента (только для админов)
+
+// UpdateElement godoc
+// @Summary Update element
+// @Description Update an existing chemical element (Admin only)
+// @Tags elements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Element ID"
+// @Param request body UpdateElementRequest true "Updated element data"
+// @Success 200 {object} SuccessResponse "Element updated successfully"
+// @Failure 400 {object} ErrorResponse "Invalid request data or validation error"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
+// @Failure 404 {object} ErrorResponse "Element not found"
+// @Failure 409 {object} ErrorResponse "Element with this name already exists"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /elements/{id} [put]
 func (h *Handler) UpdateElement(ctx *gin.Context) {
 	strID := ctx.Param("id")
 	id, err := strconv.ParseUint(strID, 10, 32)
@@ -201,6 +259,21 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 }
 
 // DeleteElement удаление элемента (только для админов)
+
+// DeleteElement godoc
+// @Summary Delete element
+// @Description Delete a chemical element (Admin only)
+// @Tags elements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Element ID"
+// @Success 200 {object} SuccessResponse "Element deleted successfully"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
+// @Failure 404 {object} ErrorResponse "Element not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /elements/{id} [delete]
 func (h *Handler) DeleteElement(ctx *gin.Context) {
 	strID := ctx.Param("id")
 	id, err := strconv.Atoi(strID)
@@ -236,6 +309,24 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 }
 
 // UploadImage загрузка изображения для элемента (только для админов)
+
+// UploadImage godoc
+// @Summary Upload element image
+// @Description Upload an image for a chemical element (Admin only)
+// @Tags elements
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Element ID"
+// @Param image formData file true "Image file (JPEG, PNG, GIF, WebP). Max 5MB"
+// @Success 200 {object} SuccessResponse "Image uploaded successfully"
+// @Failure 400 {object} ErrorResponse "Invalid file or element ID"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
+// @Failure 404 {object} ErrorResponse "Element not found"
+// @Failure 413 {object} ErrorResponse "File too large"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /elements/{id}/image [post]
 func (h *Handler) UploadImage(ctx *gin.Context) {
 	strID := ctx.Param("id")
 	elementID, err := strconv.Atoi(strID)

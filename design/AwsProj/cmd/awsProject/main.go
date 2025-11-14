@@ -20,6 +20,16 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title API Chemistry
+// @version 1.0
+// @description DoIA
+// @contact.name API Support
+// @contact.url https://vk.com/bmstu_schedule
+// @contact.email bitop@spatecon.ru
+// @license.name AS IS (NO WARRANTY)
+// @host localhost:8082
+// @schemes http
+// @BasePath /api/v1
 func main() {
 	_ = godotenv.Load("../../.env")
 
