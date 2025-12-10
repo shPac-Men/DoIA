@@ -84,23 +84,40 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]interface{}, error) {
 	var mixedList []ds.Mixed
 
-	// Базовый запрос - ВСЕ записи
 	query := r.db.Model(&ds.Mixed{}).
 		Preload("Creator").
 		Preload("Moderator")
 
-	// Сортировка по дате создания (новые сначала)
+	// --- ФИЛЬТРЫ ---
+	if creatorID, ok := filters["creator_id"]; ok {
+		query = query.Where("creator_id = ?", creatorID)
+	}
+	if dateFrom, ok := filters["date_from"]; ok {
+		query = query.Where("date_create >= ?", dateFrom)
+	}
+	if dateTo, ok := filters["date_to"]; ok {
+		query = query.Where("date_create <= ?", dateTo)
+	}
+	if status, ok := filters["status"]; ok {
+		query = query.Where("status = ?", status)
+	}
+	// ----------------
+
 	query = query.Order("date_create DESC")
 
-	// Выполняем запрос
 	err := query.Find(&mixedList).Error
 	if err != nil {
 		return nil, err
 	}
 
-	// Преобразуем в нужный формат с логинами
 	result := make([]map[string]interface{}, len(mixedList))
 	for i, mixed := range mixedList {
+		// Логика для ModeratorID типа uint
+		modLogin := ""
+		if mixed.ModeratorID != 0 { // Проверяем на 0, а не на nil
+			modLogin = mixed.Moderator.Login
+		}
+
 		result[i] = map[string]interface{}{
 			"id":              mixed.ID,
 			"status":          mixed.Status,
@@ -108,7 +125,7 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 			"date_update":     mixed.DateUpdate,
 			"date_finish":     mixed.DateFinish,
 			"creator_login":   mixed.Creator.Login,
-			"moderator_login": getModeratorLogin(mixed.Moderator),
+			"moderator_login": modLogin,
 			"ph":              mixed.Ph,
 			"concentration":   mixed.Concentartion,
 			"total_volume":    mixed.TotalVolume,
@@ -265,13 +282,43 @@ func (r *Repository) GetMixedItems(mixedID uint) ([]ds.ElemMix, error) {
 	return items, nil
 }
 
-func (r *Repository) GetMixedByIDBasic(mixedID uint) (*ds.Mixed, error) {
-	var mixed ds.Mixed
-	err := r.db.Where("id = ?", mixedID).First(&mixed).Error
+func (r *Repository) CompleteMixedWithData(mixedID uint, ph, volume, concentration float64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var mixed ds.Mixed
+
+		// Проверяем существование (статус уже не важен, если модератор решил пересчитать/завершить повторно,
+		// но обычно проверяют "draft" или "pending")
+		err := tx.Where("id = ?", mixedID).First(&mixed).Error
+		if err != nil {
+			return err
+		}
+
+		// Данные для обновления
+		updates := map[string]interface{}{
+			"status":        "completed",
+			"date_update":   time.Now(),
+			"date_finish":   time.Now(),    // <--- Ставим дату завершения
+			"ph":            ph,            // <--- Записываем расчеты
+			"total_volume":  volume,        // <--- Записываем расчеты
+			"concentartion": concentration, // <--- Записываем расчеты (сохраняем орфографию БД)
+		}
+
+		// Выполняем обновление
+		err = tx.Model(&ds.Mixed{}).
+			Where("id = ?", mixedID).
+			Updates(updates).Error
+
+		return err
+	})
+}
+
+func (r *Repository) GetMixedByIDBasic(id uint) (*ds.Mixed, error) {
+	mixed := &ds.Mixed{}
+	err := r.db.First(mixed, id).Error
 	if err != nil {
 		return nil, err
 	}
-	return &mixed, nil
+	return mixed, nil
 }
 
 func (r *Repository) DeleteMixed(mixedID uint) error {

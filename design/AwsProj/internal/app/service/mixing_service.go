@@ -5,6 +5,7 @@ import (
 	"AwsProj/internal/app/repository"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -279,27 +280,90 @@ func (s *MixingService) UpdateMixed(mixedID uint, req *UpdateMixedRequest) error
 
 // CompleteMixed формирует заявку
 func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (*CompleteMixedResponse, error) {
-	err := s.repo.ValidateMixedForCompletion(mixedID)
-	if err != nil {
-		return nil, err
-	}
-
+	// 1. Получаем элементы заказа для расчета
 	items, err := s.repo.GetMixedItems(mixedID)
 	if err != nil {
 		return nil, err
 	}
 
+	if len(items) == 0 {
+		return nil, fmt.Errorf("заказ пуст, невозможно завершить")
+	}
+
+	// 2. Валидация объемов
 	for _, item := range items {
 		if item.Volume <= 0 {
 			return nil, fmt.Errorf("объем элемента '%s' должен быть положительным", item.Element.Name)
 		}
 	}
 
-	err = s.repo.CompleteMixed(mixedID)
+	// --- НАЧАЛО РАСЧЕТА ---
+	var totalProtons float64
+	var totalVolume float64
+	var totalMass float64
+
+	// Получаем текущее значение добавленной воды (оно уже есть в заказе)
+	currentMixed, err := s.repo.GetMixedByIDBasic(mixedID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Учитываем добавленную воду в общем объеме
+	totalVolume = currentMixed.AddedWater
+
+	for _, item := range items {
+		// Приводим item.Volume к float64
+		itemVol := float64(item.Volume)
+
+		// Исправляем: totalVolume += float64(item.Volume)
+		totalVolume += itemVol
+
+		// Для расчета pH
+		// item.Element.Ph скорее всего float32, приводим к float64 для math.Pow
+		phVal := float64(item.Element.Ph)
+		hConcentration := math.Pow(10, -phVal)
+
+		molesH := hConcentration * itemVol
+		totalProtons += molesH
+
+		// Для расчета концентрации
+		// item.Element.Concentration скорее всего float32
+		concVal := float64(item.Element.Concentration)
+		mass := concVal * itemVol
+		totalMass += mass
+	}
+
+	// Итоговый pH
+	var finalPh float64
+	if totalVolume > 0 {
+		finalHConcentration := totalProtons / totalVolume
+		if finalHConcentration > 0 {
+			finalPh = -math.Log10(finalHConcentration)
+		} else {
+			finalPh = 7.0 // Нейтральная среда, если нет протонов
+		}
+	} else {
+		finalPh = 7.0
+	}
+
+	// Итоговая концентрация
+	var finalConcentration float64
+	if totalVolume > 0 {
+		finalConcentration = totalMass / totalVolume
+	}
+
+	// Округляем до 2 знаков
+	finalPh = math.Round(finalPh*100) / 100
+	finalConcentration = math.Round(finalConcentration*100) / 100
+	// --- КОНЕЦ РАСЧЕТА ---
+
+	// 3. Вызываем репозиторий с новыми данными
+	err = s.repo.CompleteMixedWithData(mixedID, finalPh, totalVolume, finalConcentration) // <-- Заменил finalVolume на totalVolume
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Получаем обновленные данные для ответа
 	updatedMixed, err := s.repo.GetMixedByIDBasic(mixedID)
 	if err != nil {
 		return nil, err
@@ -309,7 +373,7 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 		MixedID:    mixedID,
 		Status:     updatedMixed.Status,
 		DateUpdate: updatedMixed.DateUpdate,
-		Message:    "Заявка успешно сформирована",
+		Message:    fmt.Sprintf("Заявка завершена. pH: %.2f, V: %.2f", finalPh, totalVolume),
 	}, nil
 }
 

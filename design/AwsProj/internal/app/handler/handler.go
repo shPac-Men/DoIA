@@ -91,6 +91,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 		{
 			mixed.GET("my", h.GetMyMixedList)
 			mixed.GET("my/:id", h.GetMyMixedByID)
+
 		}
 	}
 
