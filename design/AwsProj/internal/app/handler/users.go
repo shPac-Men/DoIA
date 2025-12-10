@@ -9,8 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// GetUserProfile - получение профиля текущего пользователя
-
 // GetUserProfile godoc
 // @Summary Get current user profile
 // @Description Get profile information of the authenticated user
@@ -18,19 +16,16 @@ import (
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} SuccessResponse "User profile retrieved"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 404 {object} ErrorResponse "User not found"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {object} UserProfileResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /auth/profile [get]
 func (h *Handler) GetUserProfile(gCtx *gin.Context) {
 	userID, exists := gCtx.Get("user_id")
 	if !exists {
 		logrus.Warn("❌ GetUserProfile: Unauthorized access")
-		gCtx.JSON(http.StatusUnauthorized, ErrorResponse{
-			Success: false,
-			Error:   "Unauthorized",
-			Message: "User not authenticated",
+		gCtx.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
 		})
 		return
 	}
@@ -41,28 +36,21 @@ func (h *Handler) GetUserProfile(gCtx *gin.Context) {
 	profile, err := h.UserService.GetUserProfile(userIDVal)
 	if err != nil {
 		logrus.Errorf("❌ User not found: %v", err)
-		gCtx.JSON(http.StatusNotFound, ErrorResponse{
-			Success: false,
-			Error:   "Not found",
-			Message: err.Error(),
+		gCtx.JSON(http.StatusNotFound, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
 	logrus.Infof("✅ Profile retrieved: user=%d, login=%s", profile.ID, profile.Login)
 
-	gCtx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Data: UserProfileResponse{
-			ID:          profile.ID,
-			Login:       profile.Login,
-			Role:        profile.Role,
-			IsModerator: profile.IsModerator,
-		},
+	gCtx.JSON(http.StatusOK, UserProfileResponse{
+		ID:          profile.ID,
+		Login:       profile.Login,
+		Role:        profile.Role,
+		IsModerator: profile.IsModerator,
 	})
 }
-
-// UpdateUser - обновление данных пользователя
 
 // UpdateUser godoc
 // @Summary Update user profile
@@ -71,20 +59,18 @@ func (h *Handler) GetUserProfile(gCtx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body UpdateUserRequest true "Updated user data (all fields optional)"
-// @Success 200 {object} SuccessResponse "User updated successfully"
-// @Failure 400 {object} ErrorResponse "Invalid request or validation error"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 409 {object} ErrorResponse "Login already exists"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Param request body UpdateUserRequest true "Updated user data"
+// @Success 204 "No Content"
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
 // @Router /auth/profile [put]
 func (h *Handler) UpdateUser(gCtx *gin.Context) {
 	userID, exists := gCtx.Get("user_id")
 	if !exists {
 		logrus.Warn("❌ UpdateUser: Unauthorized access")
-		gCtx.JSON(http.StatusUnauthorized, ErrorResponse{
-			Success: false,
-			Error:   "Unauthorized",
+		gCtx.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
 		})
 		return
 	}
@@ -92,10 +78,8 @@ func (h *Handler) UpdateUser(gCtx *gin.Context) {
 	var req UpdateUserRequest
 	if err := gCtx.ShouldBindJSON(&req); err != nil {
 		logrus.Warnf("❌ UpdateUser: Invalid request - %v", err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid request",
-			Message: err.Error(),
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
@@ -103,7 +87,6 @@ func (h *Handler) UpdateUser(gCtx *gin.Context) {
 	userIDVal := userID.(uint)
 	logrus.Infof("✏️ UpdateUser: user=%d", userIDVal)
 
-	// Конвертируем в service request
 	serviceReq := &service.UpdateUserRequest{}
 	if req.Login != nil {
 		serviceReq.Login = *req.Login
@@ -118,33 +101,24 @@ func (h *Handler) UpdateUser(gCtx *gin.Context) {
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 
-		// Проверяем тип ошибки
 		errMsg := err.Error()
 		if errMsg == "login already exists" || errMsg == "логин уже существует" {
-			statusCode = http.StatusConflict // 409
+			statusCode = http.StatusConflict
 			logrus.Warnf("⚠️ UpdateUser: Login already exists")
 		} else if errMsg == "invalid login format" || errMsg == "invalid password" {
-			statusCode = http.StatusBadRequest // 400
+			statusCode = http.StatusBadRequest
 			logrus.Warnf("⚠️ UpdateUser: Validation error - %v", err)
 		}
 
-		gCtx.JSON(statusCode, ErrorResponse{
-			Success: false,
-			Error:   "Update failed",
-			Message: err.Error(),
+		gCtx.JSON(statusCode, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
 	logrus.Infof("✅ User updated: user=%d", userIDVal)
-
-	gCtx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Message: "User updated successfully",
-	})
+	gCtx.Status(http.StatusNoContent)
 }
-
-// GetUserByID - получение пользователя по ID
 
 // GetUserByID godoc
 // @Summary Get user by ID
@@ -154,21 +128,18 @@ func (h *Handler) UpdateUser(gCtx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "User ID"
-// @Success 200 {object} SuccessResponse "User retrieved"
-// @Failure 400 {object} ErrorResponse "Invalid user ID format"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 404 {object} ErrorResponse "User not found"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {object} UserProfileResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /admin/users/{id} [get]
 func (h *Handler) GetUserByID(gCtx *gin.Context) {
 	userID := gCtx.Param("id")
 	var id uint
 	if _, err := fmt.Sscanf(userID, "%d", &id); err != nil {
 		logrus.Warnf("❌ GetUserByID: Invalid ID - %v", err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid user ID",
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
 		})
 		return
 	}
@@ -178,27 +149,21 @@ func (h *Handler) GetUserByID(gCtx *gin.Context) {
 	profile, err := h.UserService.GetUserByID(id)
 	if err != nil {
 		logrus.Errorf("❌ User not found: %v", err)
-		gCtx.JSON(http.StatusNotFound, ErrorResponse{
-			Success: false,
-			Error:   "User not found",
+		gCtx.JSON(http.StatusNotFound, gin.H{
+			"error": "User not found",
 		})
 		return
 	}
 
 	logrus.Infof("✅ User retrieved: id=%d, login=%s", profile.ID, profile.Login)
 
-	gCtx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Data: UserProfileResponse{
-			ID:          profile.ID,
-			Login:       profile.Login,
-			Role:        profile.Role,
-			IsModerator: profile.IsModerator,
-		},
+	gCtx.JSON(http.StatusOK, UserProfileResponse{
+		ID:          profile.ID,
+		Login:       profile.Login,
+		Role:        profile.Role,
+		IsModerator: profile.IsModerator,
 	})
 }
-
-// GetAllUsers - получение всех пользователей (админ)
 
 // GetAllUsers godoc
 // @Summary Get all users
@@ -207,10 +172,9 @@ func (h *Handler) GetUserByID(gCtx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} SuccessResponse "Users list retrieved"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {array} UserProfileResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /admin/users [get]
 func (h *Handler) GetAllUsers(gCtx *gin.Context) {
 	logrus.Info("📋 GetAllUsers: admin request")
@@ -218,9 +182,8 @@ func (h *Handler) GetAllUsers(gCtx *gin.Context) {
 	users, err := h.UserService.GetAllUsers()
 	if err != nil {
 		logrus.Errorf("❌ Failed to get users: %v", err)
-		gCtx.JSON(http.StatusInternalServerError, ErrorResponse{
-			Success: false,
-			Error:   "Failed to get users",
+		gCtx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get users",
 		})
 		return
 	}
@@ -236,14 +199,8 @@ func (h *Handler) GetAllUsers(gCtx *gin.Context) {
 	}
 
 	logrus.Infof("✅ Retrieved %d users", len(result))
-
-	gCtx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Data:    result,
-	})
+	gCtx.JSON(http.StatusOK, result)
 }
-
-// UpdateUserRole - изменение роли пользователя (админ)
 
 // UpdateUserRole godoc
 // @Summary Update user role
@@ -254,21 +211,18 @@ func (h *Handler) GetAllUsers(gCtx *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "User ID"
 // @Param request body UpdateUserRoleRequest true "Role update data"
-// @Success 200 {object} SuccessResponse "User role updated successfully"
-// @Failure 400 {object} ErrorResponse "Invalid user ID or request"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 404 {object} ErrorResponse "User not found"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 204 "No Content"
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /admin/users/{id}/role [put]
 func (h *Handler) UpdateUserRole(gCtx *gin.Context) {
 	userID := gCtx.Param("id")
 	var id uint
 	if _, err := fmt.Sscanf(userID, "%d", &id); err != nil {
 		logrus.Warnf("❌ UpdateUserRole: Invalid ID - %v", err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid user ID",
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
 		})
 		return
 	}
@@ -276,9 +230,8 @@ func (h *Handler) UpdateUserRole(gCtx *gin.Context) {
 	var req UpdateUserRoleRequest
 	if err := gCtx.ShouldBindJSON(&req); err != nil {
 		logrus.Warnf("❌ UpdateUserRole: Invalid request - %v", err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid request",
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request",
 		})
 		return
 	}
@@ -288,9 +241,8 @@ func (h *Handler) UpdateUserRole(gCtx *gin.Context) {
 	err := h.UserService.UpdateUserRole(id, req.IsModerator)
 	if err != nil {
 		logrus.Errorf("❌ Failed to update role: %v", err)
-		gCtx.JSON(http.StatusInternalServerError, ErrorResponse{
-			Success: false,
-			Error:   "Failed to update role",
+		gCtx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update role",
 		})
 		return
 	}
@@ -299,11 +251,6 @@ func (h *Handler) UpdateUserRole(gCtx *gin.Context) {
 	if req.IsModerator {
 		roleStr = "moderator"
 	}
-
 	logrus.Infof("✅ User role updated: user=%d, role=%s", id, roleStr)
-
-	gCtx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Message: "User role updated successfully",
-	})
+	gCtx.Status(http.StatusNoContent)
 }

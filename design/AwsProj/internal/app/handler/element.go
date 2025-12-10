@@ -12,8 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// GetAllElements получение всех элементов
-
 // GetAllElements godoc
 // @Summary Get all elements
 // @Description Get list of all elements with optional search by name
@@ -21,8 +19,8 @@ import (
 // @Accept json
 // @Produce json
 // @Param query query string false "Search query by element name"
-// @Success 200 {object} map[string]interface{} "Success response with elements list"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {array} ElementResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /elements [get]
 func (h *Handler) GetAllElements(ctx *gin.Context) {
 	var elements []ds.Elements
@@ -36,16 +34,13 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, ErrorResponse{
-			Success: false,
-			Error:   "Failed to get elements",
-			Message: err.Error(),
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get elements",
 		})
 		logrus.Error(err)
 		return
 	}
 
-	// Преобразуем в JSON-ответ
 	var response []ElementResponse
 	for _, elem := range elements {
 		response = append(response, ElementResponse{
@@ -58,17 +53,8 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 		})
 	}
 
-	ctx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Data: gin.H{
-			"items": response,
-			"total": len(response),
-			"query": search,
-		},
-	})
+	ctx.JSON(http.StatusOK, response)
 }
-
-// GetElementById получение элемента по ID
 
 // GetElementById godoc
 // @Summary Get element by ID
@@ -77,19 +63,16 @@ func (h *Handler) GetAllElements(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Element ID"
-// @Success 200 {object} SuccessResponse "Element found"
-// @Failure 400 {object} ErrorResponse "Invalid ID format"
-// @Failure 404 {object} ErrorResponse "Element not found"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {object} ElementResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /elements/{id} [get]
 func (h *Handler) GetElementById(ctx *gin.Context) {
 	strId := ctx.Param("id")
 	id, err := strconv.Atoi(strId)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid ID format",
-			Message: "ID must be a number",
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid ID format",
 		})
 		logrus.Error("Invalid ID format:", err)
 		return
@@ -97,10 +80,8 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 
 	element, err := h.Repository.GetElementByID(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, ErrorResponse{
-			Success: false,
-			Error:   "Element not found",
-			Message: err.Error(),
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"error": "Element not found",
 		})
 		logrus.Error("Element not found:", err)
 		return
@@ -115,13 +96,8 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 		Image:         element.Img,
 	}
 
-	ctx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Data:    response,
-	})
+	ctx.JSON(http.StatusOK, response)
 }
-
-// CreateElement создание элемента (только для админов)
 
 // CreateElement godoc
 // @Summary Create new element
@@ -131,26 +107,20 @@ func (h *Handler) GetElementById(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param request body CreateElementRequest true "Element data"
-// @Success 201 {object} SuccessResponse "Element created successfully"
-// @Failure 400 {object} ErrorResponse "Invalid request data or validation error"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 409 {object} ErrorResponse "Element already exists"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 201 {object} service.CreateElementResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
 // @Router /elements [post]
 func (h *Handler) CreateElement(ctx *gin.Context) {
 	var req CreateElementRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid request data",
-			Message: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
-	// Конвертируем в service request
 	serviceReq := &service.CreateElementRequest{
 		Name:          req.Name,
 		Description:   req.Description,
@@ -167,22 +137,14 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 			statusCode = http.StatusBadRequest
 		}
 
-		ctx.JSON(statusCode, ErrorResponse{
-			Success: false,
-			Error:   "Failed to create element",
-			Message: err.Error(),
+		ctx.JSON(statusCode, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, SuccessResponse{
-		Success: true,
-		Message: result.Message,
-		Data:    result,
-	})
+	ctx.JSON(http.StatusCreated, result)
 }
-
-// UpdateElement обновление элемента (только для админов)
 
 // UpdateElement godoc
 // @Summary Update element
@@ -193,37 +155,28 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Element ID"
 // @Param request body UpdateElementRequest true "Updated element data"
-// @Success 200 {object} SuccessResponse "Element updated successfully"
-// @Failure 400 {object} ErrorResponse "Invalid request data or validation error"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 404 {object} ErrorResponse "Element not found"
-// @Failure 409 {object} ErrorResponse "Element with this name already exists"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {object} service.UpdateElementResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /elements/{id} [put]
 func (h *Handler) UpdateElement(ctx *gin.Context) {
 	strID := ctx.Param("id")
 	id, err := strconv.ParseUint(strID, 10, 32)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid element ID",
-			Message: "ID must be a number",
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid element ID",
 		})
 		return
 	}
 
 	var req UpdateElementRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid request data",
-			Message: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
-	// Конвертируем в service request
 	serviceReq := &service.UpdateElementRequest{
 		Name:          req.Name,
 		Description:   req.Description,
@@ -243,22 +196,14 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 			statusCode = http.StatusBadRequest
 		}
 
-		ctx.JSON(statusCode, ErrorResponse{
-			Success: false,
-			Error:   "Failed to update element",
-			Message: err.Error(),
+		ctx.JSON(statusCode, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Message: result.Message,
-		Data:    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
-
-// DeleteElement удаление элемента (только для админов)
 
 // DeleteElement godoc
 // @Summary Delete element
@@ -268,20 +213,15 @@ func (h *Handler) UpdateElement(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Element ID"
-// @Success 200 {object} SuccessResponse "Element deleted successfully"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 404 {object} ErrorResponse "Element not found"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {object} service.DeleteElementResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /elements/{id} [delete]
 func (h *Handler) DeleteElement(ctx *gin.Context) {
 	strID := ctx.Param("id")
 	id, err := strconv.Atoi(strID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid element ID",
-			Message: "ID must be a number",
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid element ID",
 		})
 		return
 	}
@@ -293,22 +233,14 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 			statusCode = http.StatusNotFound
 		}
 
-		ctx.JSON(statusCode, ErrorResponse{
-			Success: false,
-			Error:   "Failed to delete element",
-			Message: err.Error(),
+		ctx.JSON(statusCode, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Message: result.Message,
-		Data:    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }
-
-// UploadImage загрузка изображения для элемента (только для админов)
 
 // UploadImage godoc
 // @Summary Upload element image
@@ -318,33 +250,25 @@ func (h *Handler) DeleteElement(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Element ID"
-// @Param image formData file true "Image file (JPEG, PNG, GIF, WebP). Max 5MB"
-// @Success 200 {object} SuccessResponse "Image uploaded successfully"
-// @Failure 400 {object} ErrorResponse "Invalid file or element ID"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 403 {object} ErrorResponse "Forbidden - Admin access required"
-// @Failure 404 {object} ErrorResponse "Element not found"
-// @Failure 413 {object} ErrorResponse "File too large"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Param image formData file true "Image file"
+// @Success 200 {object} service.UploadImageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /elements/{id}/image [post]
 func (h *Handler) UploadImage(ctx *gin.Context) {
 	strID := ctx.Param("id")
 	elementID, err := strconv.Atoi(strID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid element ID",
-			Message: "ID must be a number",
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid element ID",
 		})
 		return
 	}
 
 	fileHeader, err := ctx.FormFile("image")
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "File not found",
-			Message: "Image file is required",
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Image file is required",
 		})
 		return
 	}
@@ -359,17 +283,11 @@ func (h *Handler) UploadImage(ctx *gin.Context) {
 			statusCode = http.StatusBadRequest
 		}
 
-		ctx.JSON(statusCode, ErrorResponse{
-			Success: false,
-			Error:   "Failed to upload image",
-			Message: err.Error(),
+		ctx.JSON(statusCode, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Message: result.Message,
-		Data:    result,
-	})
+	ctx.JSON(http.StatusOK, result)
 }

@@ -11,8 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Login - аутентификация
-
 // Login godoc
 // @Summary User login
 // @Description Authenticate user with credentials and receive JWT token + session cookie
@@ -21,19 +19,17 @@ import (
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Login credentials"
-// @Success 200 {object} LoginResponse "Successfully authenticated. Returns JWT token and session cookie"
-// @Failure 400 {object} ErrorResponse "Invalid request format"
-// @Failure 401 {object} ErrorResponse "Invalid credentials (wrong login or password)"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /auth/login [post]
 func (h *Handler) Login(gCtx *gin.Context) {
 	var req LoginRequest
 	if err := gCtx.ShouldBindJSON(&req); err != nil {
 		logrus.Warnf("❌ Login: Invalid request - %v", err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid request",
-			Message: err.Error(),
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request format",
 		})
 		return
 	}
@@ -48,10 +44,8 @@ func (h *Handler) Login(gCtx *gin.Context) {
 	loginResp, err := h.UserService.Login(serviceReq)
 	if err != nil {
 		logrus.Warnf("❌ Login failed for user %s: %v", req.Login, err)
-		gCtx.JSON(http.StatusUnauthorized, ErrorResponse{
-			Success: false,
-			Error:   "Authentication failed",
-			Message: "Invalid login or password",
+		gCtx.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Invalid login or password",
 		})
 		return
 	}
@@ -63,10 +57,8 @@ func (h *Handler) Login(gCtx *gin.Context) {
 	tokenTTL := 24 * time.Hour
 	if err := h.redisTokenService.SaveToken(ctx, loginResp.ID, loginResp.Token, tokenTTL); err != nil {
 		logrus.Errorf("❌ Failed to save token to Redis: %v", err)
-		gCtx.JSON(http.StatusInternalServerError, ErrorResponse{
-			Success: false,
-			Error:   "Token save failed",
-			Message: "Failed to save authentication token",
+		gCtx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save authentication token",
 		})
 		return
 	}
@@ -81,10 +73,8 @@ func (h *Handler) Login(gCtx *gin.Context) {
 	session.Set("is_moderator", loginResp.IsModerator)
 	if err := session.Save(); err != nil {
 		logrus.Errorf("❌ Failed to save session: %v", err)
-		gCtx.JSON(http.StatusInternalServerError, ErrorResponse{
-			Success: false,
-			Error:   "Session save failed",
-			Message: err.Error(),
+		gCtx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save session",
 		})
 		return
 	}
@@ -105,8 +95,6 @@ func (h *Handler) Login(gCtx *gin.Context) {
 	})
 }
 
-// Register - регистрация
-
 // Register godoc
 // @Summary User registration
 // @Description Create a new user account with login and password
@@ -114,18 +102,16 @@ func (h *Handler) Login(gCtx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body RegisterRequest true "Registration data"
-// @Success 200 {object} RegisterResponse "User successfully registered"
-// @Failure 400 {object} ErrorResponse "Invalid request or user already exists"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 201 {object} UserInfo "User successfully registered"
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /auth/register [post]
 func (h *Handler) Register(gCtx *gin.Context) {
 	var req RegisterRequest
 	if err := gCtx.ShouldBindJSON(&req); err != nil {
 		logrus.Warnf("❌ Register: Invalid request - %v", err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Invalid request",
-			Message: err.Error(),
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
@@ -140,26 +126,20 @@ func (h *Handler) Register(gCtx *gin.Context) {
 	registerResp, err := h.UserService.Register(serviceReq)
 	if err != nil {
 		logrus.Warnf("❌ Register failed for %s: %v", req.Login, err)
-		gCtx.JSON(http.StatusBadRequest, ErrorResponse{
-			Success: false,
-			Error:   "Registration failed",
-			Message: err.Error(),
+		gCtx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
 
 	logrus.Infof("✅ User registered: ID=%d, Login=%s", registerResp.ID, registerResp.Login)
 
-	gCtx.JSON(http.StatusOK, RegisterResponse{
-		Message: "User successfully registered",
-		User: UserInfo{
-			ID:    registerResp.ID,
-			Login: registerResp.Login,
-		},
+	// Используем 201 Created и возвращаем только созданный ресурс
+	gCtx.JSON(http.StatusCreated, UserInfo{
+		ID:    registerResp.ID,
+		Login: registerResp.Login,
 	})
 }
-
-// Logout - выход
 
 // Logout godoc
 // @Summary User logout
@@ -169,9 +149,9 @@ func (h *Handler) Register(gCtx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} SuccessResponse "Successfully logged out"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Success 204 "No Content"
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /auth/logout [post]
 func (h *Handler) Logout(gCtx *gin.Context) {
 	userID := h.auth.GetUserID(gCtx)
@@ -186,7 +166,7 @@ func (h *Handler) Logout(gCtx *gin.Context) {
 
 		if err := h.redisTokenService.RevokeToken(ctx, userID); err != nil {
 			logrus.Warnf("⚠️ Failed to revoke token from Redis: %v", err)
-			// Не возвращаем ошибку - продолжаем логаут
+			// Не возвращаем ошибку клиенту, продолжаем очистку сессии
 		} else {
 			logrus.Infof("✅ Token revoked from Redis for user %d", userID)
 		}
@@ -198,14 +178,14 @@ func (h *Handler) Logout(gCtx *gin.Context) {
 	session.Options(sessions.Options{MaxAge: -1})
 	if err := session.Save(); err != nil {
 		logrus.Warnf("⚠️ Failed to clear session: %v", err)
-	} else {
-		logrus.Infof("✅ Session cleared for user %d", userID)
+		gCtx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to clear session",
+		})
+		return
 	}
 
 	logrus.Infof("✅ User %d logged out successfully", userID)
 
-	gCtx.JSON(http.StatusOK, SuccessResponse{
-		Success: true,
-		Message: "Logged out successfully",
-	})
+	// 204 No Content - стандартный ответ для Logout без тела ответа
+	gCtx.Status(http.StatusNoContent)
 }
