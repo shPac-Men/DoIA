@@ -26,7 +26,9 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		if origin == "https://shPac-Men.github.io" || origin == "http://localhost:5173" || origin == "http://localhost:3000" {
+		if origin == "https://shpac-men.github.io" ||
+			origin == "http://localhost:5173" ||
+			origin == "http://localhost:3000" {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -34,7 +36,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		}
 
 		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
