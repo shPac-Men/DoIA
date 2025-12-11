@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 
 	"AwsProj/internal/app/config"
 	"AwsProj/internal/app/dsn"
@@ -20,6 +22,26 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+
+		if origin == "https://shPac-Men.github.io" || origin == "http://localhost:5173" || origin == "http://localhost:3000" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		}
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // @title API Chemistry
 // @version 1.0
 // @description DoIA
@@ -34,19 +56,7 @@ func main() {
 	_ = godotenv.Load("../../.env")
 
 	router := gin.Default()
-
-	// CORS Middleware - ПЕРВЫЙ
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
+	router.Use(CORSMiddleware())
 
 	// Config
 	conf, err := config.NewConfig()
@@ -136,9 +146,18 @@ func main() {
 	// Построение адреса сервера из конфига
 	serverAddr := fmt.Sprintf("%s:%d", conf.ServiceHost, conf.ServicePort)
 
-	// Run
-	logrus.Infof("🚀 Starting server on %s...", serverAddr)
-	if err := router.Run(serverAddr); err != nil {
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	srv := &http.Server{
+		Addr:      serverAddr,
+		Handler:   router,
+		TLSConfig: tlsConfig,
+	}
+
+	logrus.Infof("🚀 Starting HTTPS server on %s...", serverAddr)
+	if err := srv.ListenAndServeTLS(conf.TLSCertFile, conf.TLSKeyFile); err != nil {
 		logrus.Fatalf("❌ Server error: %v", err)
 	}
 }
