@@ -14,6 +14,8 @@ import (
 type Config struct {
 	ServiceHost string
 	ServicePort int
+	TLSCertFile string `mapstructure:"tls_cert_file"`
+	TLSKeyFile  string `mapstructure:"tls_key_file"`
 	JWT         JWTConfig
 }
 

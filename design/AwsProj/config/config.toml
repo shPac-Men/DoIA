@@ -1,5 +1,7 @@
 ServiceHost = "0.0.0.0"
 ServicePort = 8082
+tls_cert_file = "/home/artem/Desktop/RIP/DoIA/design/AwsProj/certs/server.crt"
+tls_key_file  = "/home/artem/Desktop/RIP/DoIA/design/AwsProj/certs/server.key"
 
 [jwt]
 token = "your-secret-key"
