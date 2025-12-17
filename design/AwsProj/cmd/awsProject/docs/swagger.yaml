@@ -1,0 +1,16 @@
+basePath: /api/v1
+host: localhost:8082
+info:
+  contact:
+    email: bitop@spatecon.ru
+    name: API Support
+    url: https://vk.com/bmstu_schedule
+  description: DoIA
+  license:
+    name: AS IS (NO WARRANTY)
+  title: API Chemistry
+  version: "1.0"
+paths: {}
+schemes:
+- http
+swagger: "2.0"

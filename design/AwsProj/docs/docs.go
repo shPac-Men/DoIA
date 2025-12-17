@@ -43,7 +43,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filter by status (draft, pending, completed)",
+                        "description": "Filter by status",
                         "name": "status",
                         "in": "query"
                     },
@@ -68,31 +68,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "All orders retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.MixedListItem"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Invalid query parameters",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -129,31 +120,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Mixing order created successfully",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handler.SuccessResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request or empty cart",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -190,13 +169,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/handler.MixedDetailResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid ID format",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -207,20 +186,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -253,7 +220,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Updated order data (all fields optional)",
+                        "description": "Updated order data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -263,14 +230,11 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Order updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
-                        "description": "Invalid request or ID",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -281,20 +245,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -327,7 +279,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Delete options (hard_delete: true for permanent delete)",
+                        "description": "Delete options",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -337,14 +289,11 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Order deleted successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
-                        "description": "Invalid request or ID",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -355,20 +304,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -414,13 +351,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order completed successfully",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/service.CompleteMixedResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request or ID",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -431,20 +368,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -489,14 +414,11 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Element removed successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
-                        "description": "Invalid request or ID",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -507,20 +429,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "Order or element not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -548,9 +458,12 @@ const docTemplate = `{
                 "summary": "Get all users",
                 "responses": {
                     "200": {
-                        "description": "Users list retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.UserProfileResponse"
+                            }
                         }
                     },
                     "401": {
@@ -559,14 +472,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -603,13 +510,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "User retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/handler.UserProfileResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid user ID format",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -620,20 +527,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -678,14 +573,11 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "User role updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
-                        "description": "Invalid user ID or request",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -696,20 +588,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
                     "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -743,25 +623,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully authenticated. Returns JWT token and session cookie",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handler.LoginResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request format",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "Invalid credentials (wrong login or password)",
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -788,11 +668,8 @@ const docTemplate = `{
                 ],
                 "summary": "User logout",
                 "responses": {
-                    "200": {
-                        "description": "Successfully logged out",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "401": {
                         "description": "Unauthorized",
@@ -801,7 +678,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -829,9 +706,9 @@ const docTemplate = `{
                 "summary": "Get current user profile",
                 "responses": {
                     "200": {
-                        "description": "User profile retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/handler.UserProfileResponse"
                         }
                     },
                     "401": {
@@ -841,13 +718,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -873,7 +744,7 @@ const docTemplate = `{
                 "summary": "Update user profile",
                 "parameters": [
                     {
-                        "description": "Updated user data (all fields optional)",
+                        "description": "Updated user data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -883,14 +754,11 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "User updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
-                        "description": "Invalid request or validation error",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -902,13 +770,7 @@ const docTemplate = `{
                         }
                     },
                     "409": {
-                        "description": "Login already exists",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -941,20 +803,20 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "User successfully registered",
                         "schema": {
-                            "$ref": "#/definitions/handler.RegisterResponse"
+                            "$ref": "#/definitions/handler.UserInfo"
                         }
                     },
                     "400": {
-                        "description": "Invalid request or user already exists",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -985,14 +847,16 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Success response with elements list",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.ElementResponse"
+                            }
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1029,37 +893,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Element created successfully",
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/service.CreateElementResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request data or validation error",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "409": {
-                        "description": "Element already exists",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1091,25 +937,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Element found",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/handler.ElementResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid ID format",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Element not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1153,43 +993,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Element updated successfully",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/service.ElementResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request data or validation error",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Element not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "409": {
-                        "description": "Element with this name already exists",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1224,31 +1040,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Element deleted successfully",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/service.DeleteElementResponse"
                         }
                     },
                     "404": {
-                        "description": "Element not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1284,7 +1082,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "Image file (JPEG, PNG, GIF, WebP). Max 5MB",
+                        "description": "Image file",
                         "name": "image",
                         "in": "formData",
                         "required": true
@@ -1292,43 +1090,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Image uploaded successfully",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/service.UploadImageResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid file or element ID",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - Admin access required",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Element not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "413": {
-                        "description": "File too large",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1336,7 +1110,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/mixed": {
+        "/mixed/my": {
             "get": {
                 "security": [
                     {
@@ -1376,9 +1150,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Orders list retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.MixedListItem"
+                            }
                         }
                     },
                     "401": {
@@ -1388,7 +1165,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1396,7 +1173,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/mixed/{id}": {
+        "/mixed/my/{id}": {
             "get": {
                 "security": [
                     {
@@ -1425,13 +1202,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order retrieved",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/handler.MixedDetailResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid ID format",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1443,19 +1220,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Access denied - not your order",
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1483,9 +1254,9 @@ const docTemplate = `{
                 "summary": "Get user's mixing cart",
                 "responses": {
                     "200": {
-                        "description": "Cart retrieved successfully",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/handler.MixingResponse"
                         }
                     },
                     "401": {
@@ -1495,7 +1266,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1518,7 +1289,7 @@ const docTemplate = `{
                 "summary": "Get cart icon info",
                 "responses": {
                     "200": {
-                        "description": "Cart info",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handler.CartIconResponse"
                         }
@@ -1557,13 +1328,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Element added successfully",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
+                            "$ref": "#/definitions/service.AddToMixingResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid element ID or volume",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1575,13 +1346,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Element not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1619,32 +1384,17 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Element removed successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handler.SuccessResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
-                        "description": "Invalid request",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Element not found in cart",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1723,6 +1473,29 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ElementResponse": {
+            "type": "object",
+            "properties": {
+                "concentration": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number"
+                }
+            }
+        },
         "handler.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1769,6 +1542,157 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.MixedDetailItem": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "concentration": {
+                    "type": "number"
+                },
+                "element_id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "volume": {
+                    "type": "number"
+                }
+            }
+        },
+        "handler.MixedDetailResponse": {
+            "type": "object",
+            "properties": {
+                "added_water": {
+                    "type": "number"
+                },
+                "concentration": {
+                    "type": "number"
+                },
+                "creator_login": {
+                    "type": "string"
+                },
+                "date_create": {
+                    "type": "string"
+                },
+                "date_finish": {
+                    "type": "string"
+                },
+                "date_update": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.MixedDetailItem"
+                    }
+                },
+                "moderator_login": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_volume": {
+                    "type": "number"
+                }
+            }
+        },
+        "handler.MixedListItem": {
+            "type": "object",
+            "properties": {
+                "added_water": {
+                    "type": "number"
+                },
+                "concentration": {
+                    "type": "number"
+                },
+                "creator_login": {
+                    "type": "string"
+                },
+                "date_create": {
+                    "type": "string"
+                },
+                "date_finish": {
+                    "type": "string"
+                },
+                "date_update": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "moderator_login": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_volume": {
+                    "type": "number"
+                }
+            }
+        },
+        "handler.MixingItemResponse": {
+            "type": "object",
+            "properties": {
+                "concentration": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "volume": {
+                    "type": "number"
+                }
+            }
+        },
+        "handler.MixingResponse": {
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.MixingItemResponse"
+                    }
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.RegisterRequest": {
             "type": "object",
             "required": [
@@ -1784,17 +1708,6 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "minLength": 6
-                }
-            }
-        },
-        "handler.RegisterResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/handler.UserInfo"
                 }
             }
         },
@@ -1903,8 +1816,96 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.UserProfileResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "is_moderator": {
+                    "type": "boolean"
+                },
+                "login": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.AddToMixingResponse": {
+            "type": "object",
+            "properties": {
+                "elementID": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "userID": {
+                    "type": "integer"
+                },
+                "volume": {
+                    "type": "number",
+                    "format": "float32"
+                }
+            }
+        },
         "service.CompleteMixedRequest": {
             "type": "object"
+        },
+        "service.CompleteMixedResponse": {
+            "type": "object",
+            "properties": {
+                "dateUpdate": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "mixedID": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CreateElementResponse": {
+            "type": "object",
+            "properties": {
+                "concentration": {
+                    "type": "number",
+                    "format": "float32"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number",
+                    "format": "float32"
+                }
+            }
+        },
+        "service.DeleteElementResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
         },
         "service.DeleteFromMixedRequest": {
             "type": "object",
@@ -1922,6 +1923,48 @@ const docTemplate = `{
             "properties": {
                 "hardDelete": {
                     "type": "boolean"
+                }
+            }
+        },
+        "service.ElementResponse": {
+            "type": "object",
+            "properties": {
+                "concentration": {
+                    "type": "number",
+                    "format": "float32"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ph": {
+                    "type": "number",
+                    "format": "float32"
+                }
+            }
+        },
+        "service.UploadImageResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         }

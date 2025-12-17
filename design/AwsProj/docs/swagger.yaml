@@ -48,6 +48,21 @@ definitions:
     required:
     - title
     type: object
+  handler.ElementResponse:
+    properties:
+      concentration:
+        type: number
+      description:
+        type: string
+      id:
+        type: integer
+      image:
+        type: string
+      name:
+        type: string
+      ph:
+        type: number
+    type: object
   handler.ErrorResponse:
     properties:
       error:
@@ -78,6 +93,105 @@ definitions:
       user:
         $ref: '#/definitions/handler.UserInfo'
     type: object
+  handler.MixedDetailItem:
+    properties:
+      comment:
+        type: string
+      concentration:
+        type: number
+      element_id:
+        type: integer
+      image:
+        type: string
+      ph:
+        type: number
+      title:
+        type: string
+      volume:
+        type: number
+    type: object
+  handler.MixedDetailResponse:
+    properties:
+      added_water:
+        type: number
+      concentration:
+        type: number
+      creator_login:
+        type: string
+      date_create:
+        type: string
+      date_finish:
+        type: string
+      date_update:
+        type: string
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/handler.MixedDetailItem'
+        type: array
+      moderator_login:
+        type: string
+      ph:
+        type: number
+      status:
+        type: string
+      total_volume:
+        type: number
+    type: object
+  handler.MixedListItem:
+    properties:
+      added_water:
+        type: number
+      concentration:
+        type: number
+      creator_login:
+        type: string
+      date_create:
+        type: string
+      date_finish:
+        type: string
+      date_update:
+        type: string
+      id:
+        type: integer
+      moderator_login:
+        type: string
+      ph:
+        type: number
+      status:
+        type: string
+      total_volume:
+        type: number
+    type: object
+  handler.MixingItemResponse:
+    properties:
+      concentration:
+        type: number
+      id:
+        type: integer
+      image:
+        type: string
+      ph:
+        type: number
+      title:
+        type: string
+      volume:
+        type: number
+    type: object
+  handler.MixingResponse:
+    properties:
+      cart_id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/handler.MixingItemResponse'
+        type: array
+      total_items:
+        type: integer
+      user_id:
+        type: integer
+    type: object
   handler.RegisterRequest:
     properties:
       login:
@@ -90,13 +204,6 @@ definitions:
     required:
     - login
     - password
-    type: object
-  handler.RegisterResponse:
-    properties:
-      message:
-        type: string
-      user:
-        $ref: '#/definitions/handler.UserInfo'
     type: object
   handler.RemoveFromMixingRequest:
     properties:
@@ -169,7 +276,65 @@ definitions:
       role:
         type: string
     type: object
+  handler.UserProfileResponse:
+    properties:
+      id:
+        type: integer
+      is_moderator:
+        type: boolean
+      login:
+        type: string
+      role:
+        type: string
+    type: object
+  service.AddToMixingResponse:
+    properties:
+      elementID:
+        type: integer
+      message:
+        type: string
+      userID:
+        type: integer
+      volume:
+        format: float32
+        type: number
+    type: object
   service.CompleteMixedRequest:
+    type: object
+  service.CompleteMixedResponse:
+    properties:
+      dateUpdate:
+        type: string
+      message:
+        type: string
+      mixedID:
+        type: integer
+      status:
+        type: string
+    type: object
+  service.CreateElementResponse:
+    properties:
+      concentration:
+        format: float32
+        type: number
+      description:
+        type: string
+      id:
+        type: integer
+      message:
+        type: string
+      name:
+        type: string
+      ph:
+        format: float32
+        type: number
+    type: object
+  service.DeleteElementResponse:
+    properties:
+      id:
+        type: integer
+      message:
+        type: string
     type: object
   service.DeleteFromMixedRequest:
     properties:
@@ -182,6 +347,34 @@ definitions:
     properties:
       hardDelete:
         type: boolean
+    type: object
+  service.ElementResponse:
+    properties:
+      concentration:
+        format: float32
+        type: number
+      description:
+        type: string
+      id:
+        type: integer
+      image:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      ph:
+        format: float32
+        type: number
+    type: object
+  service.UploadImageResponse:
+    properties:
+      id:
+        type: integer
+      image:
+        type: string
+      message:
+        type: string
     type: object
 host: localhost:8082
 info:
@@ -201,7 +394,7 @@ paths:
       - application/json
       description: Get list of all mixing orders in system (Admin only)
       parameters:
-      - description: Filter by status (draft, pending, completed)
+      - description: Filter by status
         in: query
         name: status
         type: string
@@ -221,23 +414,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: All orders retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            items:
+              $ref: '#/definitions/handler.MixedListItem'
+            type: array
         "400":
-          description: Invalid query parameters
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -260,23 +447,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: Mixing order created successfully
+          description: OK
           schema:
             $ref: '#/definitions/handler.SuccessResponse'
         "400":
-          description: Invalid request or empty cart
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -295,7 +474,7 @@ paths:
         name: id
         required: true
         type: integer
-      - description: 'Delete options (hard_delete: true for permanent delete)'
+      - description: Delete options
         in: body
         name: request
         required: true
@@ -304,28 +483,18 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Order deleted successfully
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "400":
-          description: Invalid request or ID
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Order not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -347,27 +516,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Order retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/handler.MixedDetailResponse'
         "400":
-          description: Invalid ID format
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Order not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -385,7 +546,7 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Updated order data (all fields optional)
+      - description: Updated order data
         in: body
         name: request
         required: true
@@ -394,28 +555,18 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Order updated successfully
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "400":
-          description: Invalid request or ID
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Order not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -444,27 +595,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Order completed successfully
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/service.CompleteMixedResponse'
         "400":
-          description: Invalid request or ID
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Order not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -492,28 +635,18 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Element removed successfully
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "400":
-          description: Invalid request or ID
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Order or element not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -530,19 +663,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: Users list retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            items:
+              $ref: '#/definitions/handler.UserProfileResponse'
+            type: array
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -565,27 +696,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: User retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/handler.UserProfileResponse'
         "400":
-          description: Invalid user ID format
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -613,28 +736,18 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: User role updated successfully
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "400":
-          description: Invalid user ID or request
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -660,19 +773,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successfully authenticated. Returns JWT token and session cookie
+          description: OK
           schema:
             $ref: '#/definitions/handler.LoginResponse'
         "400":
-          description: Invalid request format
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
-          description: Invalid credentials (wrong login or password)
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: User login
@@ -688,16 +801,14 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Successfully logged out
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -714,19 +825,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: User profile retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/handler.UserProfileResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -739,7 +846,7 @@ paths:
       - application/json
       description: Update login and/or password of current user
       parameters:
-      - description: Updated user data (all fields optional)
+      - description: Updated user data
         in: body
         name: request
         required: true
@@ -748,12 +855,10 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: User updated successfully
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "400":
-          description: Invalid request or validation error
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
@@ -761,11 +866,7 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "409":
-          description: Login already exists
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Conflict
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -788,16 +889,16 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
+        "201":
           description: User successfully registered
           schema:
-            $ref: '#/definitions/handler.RegisterResponse'
+            $ref: '#/definitions/handler.UserInfo'
         "400":
-          description: Invalid request or user already exists
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: User registration
@@ -817,12 +918,13 @@ paths:
       - application/json
       responses:
         "200":
-          description: Success response with elements list
+          description: OK
           schema:
-            additionalProperties: true
-            type: object
+            items:
+              $ref: '#/definitions/handler.ElementResponse'
+            type: array
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get all elements
@@ -843,27 +945,15 @@ paths:
       - application/json
       responses:
         "201":
-          description: Element created successfully
+          description: Created
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/service.CreateElementResponse'
         "400":
-          description: Invalid request data or validation error
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "409":
-          description: Element already exists
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Conflict
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -886,23 +976,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Element deleted successfully
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
+            $ref: '#/definitions/service.DeleteElementResponse'
         "404":
-          description: Element not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -924,19 +1002,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: Element found
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/handler.ElementResponse'
         "400":
-          description: Invalid ID format
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Element not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get element by ID
@@ -962,31 +1036,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: Element updated successfully
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/service.ElementResponse'
         "400":
-          description: Invalid request data or validation error
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Element not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "409":
-          description: Element with this name already exists
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -1005,7 +1063,7 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Image file (JPEG, PNG, GIF, WebP). Max 5MB
+      - description: Image file
         in: formData
         name: image
         required: true
@@ -1014,31 +1072,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: Image uploaded successfully
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/service.UploadImageResponse'
         "400":
-          description: Invalid file or element ID
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden - Admin access required
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Element not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "413":
-          description: File too large
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -1046,7 +1088,7 @@ paths:
       summary: Upload element image
       tags:
       - elements
-  /mixed:
+  /mixed/my:
     get:
       consumes:
       - application/json
@@ -1068,15 +1110,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: Orders list retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            items:
+              $ref: '#/definitions/handler.MixedListItem'
+            type: array
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -1084,7 +1128,7 @@ paths:
       summary: Get user's mixing orders
       tags:
       - mixed
-  /mixed/{id}:
+  /mixed/my/{id}:
     get:
       consumes:
       - application/json
@@ -1099,11 +1143,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Order retrieved
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/handler.MixedDetailResponse'
         "400":
-          description: Invalid ID format
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
@@ -1111,15 +1155,11 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "403":
-          description: Access denied - not your order
+          description: Forbidden
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Order not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -1136,15 +1176,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: Cart retrieved successfully
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/handler.MixingResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -1162,7 +1202,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Cart info
+          description: OK
           schema:
             $ref: '#/definitions/handler.CartIconResponse'
       summary: Get cart icon info
@@ -1184,11 +1224,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Element added successfully
+          description: OK
           schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+            $ref: '#/definitions/service.AddToMixingResponse'
         "400":
-          description: Invalid element ID or volume
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
@@ -1196,11 +1236,7 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
-          description: Element not found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
@@ -1223,24 +1259,14 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Element removed successfully
-          schema:
-            $ref: '#/definitions/handler.SuccessResponse'
+        "204":
+          description: No Content
         "400":
-          description: Invalid request
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "401":
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "404":
-          description: Element not found in cart
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal server error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:

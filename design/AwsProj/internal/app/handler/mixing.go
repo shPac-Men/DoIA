@@ -213,7 +213,7 @@ func (h *Handler) GetCartIcon(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param request body CreateMixingRequest true "Mixing order data"
-// @Success 200 {object} gin.H
+// @Success 200 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Router /admin/mixed [post]
@@ -268,7 +268,7 @@ func (h *Handler) CreateMixing(ctx *gin.Context) {
 // @Success 200 {array} MixedListItem
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /mixed [get]
+// @Router /mixed/my [get]
 func (h *Handler) GetMyMixedList(ctx *gin.Context) {
 	userID := h.auth.GetUserID(ctx)
 	if userID == 0 {
@@ -333,7 +333,7 @@ func (h *Handler) GetMyMixedList(ctx *gin.Context) {
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
-// @Router /mixed/{id} [get]
+// @Router /mixed/my/{id} [get]
 func (h *Handler) GetMyMixedByID(ctx *gin.Context) {
 	userID := h.auth.GetUserID(ctx)
 	if userID == 0 {

@@ -155,7 +155,7 @@ func (h *Handler) CreateElement(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param id path int true "Element ID"
 // @Param request body UpdateElementRequest true "Updated element data"
-// @Success 200 {object} service.UpdateElementResponse
+// @Success 200 {object} service.ElementResponse  // <--- ИСПРАВЛЕНО ЗДЕСЬ
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Router /elements/{id} [put]

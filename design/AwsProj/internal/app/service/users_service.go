@@ -76,7 +76,7 @@ func (s *UserService) Login(req *LoginRequest) (*LoginResponse, error) {
 		return nil, errors.New("неверный логин или пароль")
 	}
 
-	role := "visitor"
+	role := "client"
 	if user.IsModerator {
 		role = "admin"
 	}
@@ -129,7 +129,7 @@ func (s *UserService) GetUserProfile(userID uint) (*UserProfileResponse, error) 
 		return nil, err
 	}
 
-	role := "visitor"
+	role := "client"
 	if user.IsModerator {
 		role = "admin"
 	}
@@ -149,7 +149,7 @@ func (s *UserService) GetUserByID(userID uint) (*UserProfileResponse, error) {
 		return nil, err
 	}
 
-	role := "visitor"
+	role := "client"
 	if user.IsModerator {
 		role = "admin"
 	}
@@ -176,7 +176,7 @@ func (s *UserService) GetAllUsers() ([]*UserProfileResponse, error) {
 
 	result := make([]*UserProfileResponse, len(users))
 	for i, user := range users {
-		role := "visitor"
+		role := "client"
 		if user.IsModerator {
 			role = "admin"
 		}
