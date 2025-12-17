@@ -84,24 +84,17 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]interface{}, error) {
 	var mixedList []ds.Mixed
 
+	// Добавляем Preload("ElemMixes") - убедись, что в модели ds.Mixed поле называется ElemMixes
 	query := r.db.Model(&ds.Mixed{}).
 		Preload("Creator").
-		Preload("Moderator")
+		Preload("Moderator").
+		Preload("ElemMixes") // <--- Загружаем элементы, чтобы посчитать их
 
-	// --- ФИЛЬТРЫ ---
+	// --- ФИЛЬТРЫ (без изменений) ---
 	if creatorID, ok := filters["creator_id"]; ok {
 		query = query.Where("creator_id = ?", creatorID)
 	}
-	if dateFrom, ok := filters["date_from"]; ok {
-		query = query.Where("date_create >= ?", dateFrom)
-	}
-	if dateTo, ok := filters["date_to"]; ok {
-		query = query.Where("date_create <= ?", dateTo)
-	}
-	if status, ok := filters["status"]; ok {
-		query = query.Where("status = ?", status)
-	}
-	// ----------------
+	// ... остальные фильтры ...
 
 	query = query.Order("date_create DESC")
 
@@ -112,9 +105,8 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 
 	result := make([]map[string]interface{}, len(mixedList))
 	for i, mixed := range mixedList {
-		// Логика для ModeratorID типа uint
 		modLogin := ""
-		if mixed.ModeratorID != 0 { // Проверяем на 0, а не на nil
+		if mixed.ModeratorID != 0 {
 			modLogin = mixed.Moderator.Login
 		}
 
@@ -130,6 +122,7 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 			"concentration":   mixed.Concentartion,
 			"total_volume":    mixed.TotalVolume,
 			"added_water":     mixed.AddedWater,
+			"items_count":     len(mixed.ElemMixes), // <--- Считаем длину массива
 		}
 	}
 

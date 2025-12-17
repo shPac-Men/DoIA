@@ -313,6 +313,7 @@ func (h *Handler) GetMyMixedList(ctx *gin.Context) {
 			Concentration:  item.Concentration,
 			TotalVolume:    item.TotalVolume,
 			AddedWater:     item.AddedWater,
+			ItemsCount:     item.ItemsCount, // <--- ВОТ ЗДЕСЬ
 		}
 	}
 
@@ -731,5 +732,6 @@ func convertMixedDetailToHandler(serviceMixed *service.MixedDetailResponse) Mixe
 		TotalVolume:    serviceMixed.TotalVolume,
 		AddedWater:     serviceMixed.AddedWater,
 		Items:          handlerItems,
+		ItemsCount:     serviceMixed.ItemsCount, // <--- ДОБАВИТЬ ВОТ ЭТО
 	}
 }

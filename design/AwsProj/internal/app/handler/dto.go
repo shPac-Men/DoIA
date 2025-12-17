@@ -145,6 +145,7 @@ type MixedListItem struct {
 	Concentration  float32 `json:"concentration"`
 	TotalVolume    float64 `json:"total_volume"`
 	AddedWater     float64 `json:"added_water"`
+	ItemsCount     int     `json:"items_count"` // <--- Добавляем
 }
 
 type MixedDetailResponse struct {
@@ -159,6 +160,7 @@ type MixedDetailResponse struct {
 	Concentration  float32           `json:"concentration"`
 	TotalVolume    float64           `json:"total_volume"`
 	AddedWater     float64           `json:"added_water"`
+	ItemsCount     int               `json:"items_count"` // <--- Добавляем с JSON тегом
 	Items          []MixedDetailItem `json:"items"`
 }
 

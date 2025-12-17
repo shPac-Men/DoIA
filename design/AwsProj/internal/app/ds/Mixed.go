@@ -19,6 +19,7 @@ type Mixed struct {
 	DateFinish    sql.NullTime `gorm:"default:null"`
 	CreatorID     uint         `gorm:"not null"`
 	ModeratorID   uint
+	ElemMixes     []ElemMix `gorm:"foreignKey:MixedID"`
 
 	Creator   Users `gorm:"foreignKey:CreatorID"`
 	Moderator Users `gorm:"foreignKey:ModeratorID"`

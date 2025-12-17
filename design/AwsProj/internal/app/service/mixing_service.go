@@ -2,7 +2,8 @@ package service
 
 import (
 	"AwsProj/internal/app/ds"
-	"AwsProj/internal/app/repository"
+	"AwsProj/internal/app/repository" // <--- Обязательно добавь этот импорт!
+	"database/sql"                    // <--- Обязательно добавь этот импорт!
 	"errors"
 	"fmt"
 	"math"
@@ -153,6 +154,14 @@ func (s *MixingService) GetMixedListByUser(userID uint, filters MixedListRequest
 func (s *MixingService) convertToMixedListItems(mixedData []map[string]interface{}) []MixedListItem {
 	result := make([]MixedListItem, len(mixedData))
 	for i, item := range mixedData {
+		// Безопасное извлечение count
+		itemsCount := 0
+		if val, ok := item["items_count"]; ok {
+			if count, ok := val.(int); ok {
+				itemsCount = count
+			}
+		}
+
 		result[i] = MixedListItem{
 			ID:             item["id"].(uint),
 			Status:         item["status"].(string),
@@ -164,9 +173,12 @@ func (s *MixingService) convertToMixedListItems(mixedData []map[string]interface
 			Concentration:  item["concentration"].(float32),
 			TotalVolume:    item["total_volume"].(float64),
 			AddedWater:     item["added_water"].(float64),
+			ItemsCount:     itemsCount, // <--- Добавили
 		}
 
-		if dateFinish, ok := item["date_finish"].(time.Time); ok && !dateFinish.IsZero() {
+		if dateFinish, ok := item["date_finish"].(sql.NullTime); ok && dateFinish.Valid {
+			result[i].DateFinish = dateFinish.Time
+		} else if dateFinish, ok := item["date_finish"].(time.Time); ok && !dateFinish.IsZero() {
 			result[i].DateFinish = dateFinish
 		}
 	}
@@ -204,7 +216,9 @@ func (s *MixingService) GetMixedByID(mixedID uint) (*MixedDetailResponse, error)
 		Concentration:  mixed.Concentartion,
 		TotalVolume:    mixed.TotalVolume,
 		AddedWater:     mixed.AddedWater,
-		Items:          items,
+
+		Items:      items,
+		ItemsCount: len(items), // <--- ВОТ ЗДЕСЬ СЧИТАЕМ КОЛИЧЕСТВО
 	}
 
 	if mixed.DateFinish.Valid {

@@ -157,6 +157,7 @@ type MixedListItem struct {
 	Concentration  float32
 	TotalVolume    float64
 	AddedWater     float64
+	ItemsCount     int // <--- Добавляе
 }
 
 type MixedDetailResponse struct {
@@ -171,6 +172,7 @@ type MixedDetailResponse struct {
 	Concentration  float32
 	TotalVolume    float64
 	AddedWater     float64
+	ItemsCount     int // <--- Добавляем поле сюда
 	Items          []MixedDetailItem
 }
 
