@@ -5,10 +5,12 @@ import (
 	"AwsProj/internal/app/repository"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -26,26 +28,114 @@ type ElementService struct {
 }
 
 func NewElementService(repo *repository.Repository, minioEndpoint, minioAccessKey, minioSecretKey, bucketName string) (*ElementService, error) {
-	// Инициализация MinIO клиента
+	// #region agent log
+	logFile, _ := os.OpenFile("/home/artem/Desktop/RIP2/.cursor/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer logFile.Close()
+	logEntry := map[string]interface{}{
+		"sessionId": "debug-session",
+		"runId": "post-fix",
+		"hypothesisId": "B",
+		"location": "element_service.go:28",
+		"message": "NewElementService entry - attempting optional MinIO init",
+		"data": map[string]interface{}{"minioEndpoint": minioEndpoint, "bucketName": bucketName},
+		"timestamp": time.Now().UnixMilli(),
+	}
+	json.NewEncoder(logFile).Encode(logEntry)
+	// #endregion
+	
+	var minioClient *minio.Client
+	
+	// Пытаемся инициализировать MinIO клиента, но не блокируем запуск приложения при ошибке
 	minioClient, err := minio.New(minioEndpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
 		Secure: false, // используйте true для HTTPS
 	})
-	if err != nil {
-		return nil, fmt.Errorf("ошибка инициализации MinIO: %v", err)
+	
+	// #region agent log
+	logEntry2 := map[string]interface{}{
+		"sessionId": "debug-session",
+		"runId": "post-fix",
+		"hypothesisId": "B",
+		"location": "element_service.go:37",
+		"message": "MinIO client creation result",
+		"data": map[string]interface{}{"clientCreated": err == nil, "error": fmt.Sprintf("%v", err)},
+		"timestamp": time.Now().UnixMilli(),
 	}
-
-	// Проверяем существование бакета, если нет - создаем
-	ctx := context.Background()
-	exists, err := minioClient.BucketExists(ctx, bucketName)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка проверки бакета: %v", err)
-	}
-	if !exists {
-		err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("ошибка создания бакета: %v", err)
+	json.NewEncoder(logFile).Encode(logEntry2)
+	// #endregion
+	
+	if err == nil {
+		// Проверяем существование бакета, если нет - создаем (но не критично, если не получится)
+		ctx := context.Background()
+		exists, err := minioClient.BucketExists(ctx, bucketName)
+		
+		// #region agent log
+		logEntry3 := map[string]interface{}{
+			"sessionId": "debug-session",
+			"runId": "post-fix",
+			"hypothesisId": "B",
+			"location": "element_service.go:45",
+			"message": "BucketExists check result",
+			"data": map[string]interface{}{"exists": exists, "error": fmt.Sprintf("%v", err)},
+			"timestamp": time.Now().UnixMilli(),
 		}
+		json.NewEncoder(logFile).Encode(logEntry3)
+		// #endregion
+		
+		if err == nil && !exists {
+			err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+			if err != nil {
+				// #region agent log
+				logEntry4 := map[string]interface{}{
+					"sessionId": "debug-session",
+					"runId": "post-fix",
+					"hypothesisId": "B",
+					"location": "element_service.go:52",
+					"message": "MakeBucket failed, continuing without MinIO",
+					"data": map[string]interface{}{"error": fmt.Sprintf("%v", err)},
+					"timestamp": time.Now().UnixMilli(),
+				}
+				json.NewEncoder(logFile).Encode(logEntry4)
+				// #endregion
+				
+				logrus.Warnf("⚠️ MinIO недоступен (ошибка создания бакета: %v), приложение продолжит работу без загрузки изображений", err)
+				minioClient = nil // Отключаем MinIO если не удалось создать бакет
+			}
+		} else if err != nil {
+			// #region agent log
+			logEntry5 := map[string]interface{}{
+				"sessionId": "debug-session",
+				"runId": "post-fix",
+				"hypothesisId": "B",
+				"location": "element_service.go:61",
+				"message": "BucketExists failed, continuing without MinIO",
+				"data": map[string]interface{}{"error": fmt.Sprintf("%v", err)},
+				"timestamp": time.Now().UnixMilli(),
+			}
+			json.NewEncoder(logFile).Encode(logEntry5)
+			// #endregion
+			
+			logrus.Warnf("⚠️ MinIO недоступен (ошибка проверки бакета: %v), приложение продолжит работу без загрузки изображений", err)
+			minioClient = nil // Отключаем MinIO если не удалось проверить бакет
+		} else {
+			logrus.Info("✅ MinIO инициализирован успешно")
+		}
+	} else {
+		// #region agent log
+		logEntry6 := map[string]interface{}{
+			"sessionId": "debug-session",
+			"runId": "post-fix",
+			"hypothesisId": "B",
+			"location": "element_service.go:71",
+			"message": "MinIO client creation failed, continuing without MinIO",
+			"data": map[string]interface{}{"error": fmt.Sprintf("%v", err)},
+			"timestamp": time.Now().UnixMilli(),
+		}
+		json.NewEncoder(logFile).Encode(logEntry6)
+		// #endregion
+		
+		logrus.Warnf("⚠️ MinIO недоступен (ошибка инициализации: %v), приложение продолжит работу без загрузки изображений", err)
+		minioClient = nil // Продолжаем без MinIO
 	}
 
 	return &ElementService{
@@ -57,6 +147,10 @@ func NewElementService(repo *repository.Repository, minioEndpoint, minioAccessKe
 
 // uploadToMinIO загружает файл в MinIO
 func (s *ElementService) uploadToMinIO(file io.Reader, fileName string, fileSize int64, contentType string) (string, error) {
+	if s.minioClient == nil {
+		return "", errors.New("MinIO недоступен, загрузка изображений отключена")
+	}
+
 	ctx := context.Background()
 
 	// Загружаем файл в MinIO
@@ -349,6 +443,12 @@ func (s *ElementService) generateRandomString(length int) string {
 // deleteImageFromMinIO удаляет изображение из MinIO
 func (s *ElementService) deleteImageFromMinIO(imageURL string) error {
 	if imageURL == "" {
+		return nil
+	}
+
+	if s.minioClient == nil {
+		// MinIO недоступен, просто логируем и продолжаем
+		logrus.Warn("MinIO недоступен, пропускаем удаление изображения")
 		return nil
 	}
 

@@ -4,18 +4,25 @@ import (
 	"AwsProj/internal/app/ds"
 	"AwsProj/internal/app/repository" // <--- Обязательно добавь этот импорт!
 	"database/sql"                    // <--- Обязательно добавь этот импорт!
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"time"
 )
 
 type MixingService struct {
-	repo *repository.Repository
+	repo            *repository.Repository
+	asyncServiceURL string
 }
 
-func NewMixingService(repo *repository.Repository) *MixingService {
-	return &MixingService{repo: repo}
+func NewMixingService(repo *repository.Repository, asyncServiceURL string) *MixingService {
+	return &MixingService{
+		repo:            repo,
+		asyncServiceURL: asyncServiceURL,
+	}
 }
 
 // GetUserMixing получает корзину пользователя
@@ -112,6 +119,10 @@ func (s *MixingService) GetMixedList(filters MixedListRequest) ([]MixedListItem,
 		repoFilters["date_to"] = dateTo
 	}
 
+	if filters.Status != "" {
+		repoFilters["status"] = filters.Status
+	}
+
 	mixedData, err := s.repo.GetMixedList(repoFilters)
 	if err != nil {
 		return nil, err
@@ -142,6 +153,10 @@ func (s *MixingService) GetMixedListByUser(userID uint, filters MixedListRequest
 		repoFilters["date_to"] = dateTo
 	}
 
+	if filters.Status != "" {
+		repoFilters["status"] = filters.Status
+	}
+
 	mixedData, err := s.repo.GetMixedList(repoFilters)
 	if err != nil {
 		return nil, err
@@ -162,6 +177,13 @@ func (s *MixingService) convertToMixedListItems(mixedData []map[string]interface
 			}
 		}
 
+		processedCount := 0
+		if val, ok := item["processed_count"]; ok {
+			if count, ok := val.(int); ok {
+				processedCount = count
+			}
+		}
+
 		result[i] = MixedListItem{
 			ID:             item["id"].(uint),
 			Status:         item["status"].(string),
@@ -173,7 +195,8 @@ func (s *MixingService) convertToMixedListItems(mixedData []map[string]interface
 			Concentration:  item["concentration"].(float32),
 			TotalVolume:    item["total_volume"].(float64),
 			AddedWater:     item["added_water"].(float64),
-			ItemsCount:     itemsCount, // <--- Добавили
+			ItemsCount:     itemsCount,      // <--- Добавили
+			ProcessedCount: processedCount, // Количество записей с ph > 0
 		}
 
 		if dateFinish, ok := item["date_finish"].(sql.NullTime); ok && dateFinish.Valid {
@@ -311,8 +334,7 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 		}
 	}
 
-	// --- НАЧАЛО РАСЧЕТА ---
-	var totalProtons float64
+	// --- РАСЧЕТ ОБЪЕМА И КОНЦЕНТРАЦИИ (pH будет рассчитан асинхронно) ---
 	var totalVolume float64
 	var totalMass float64
 
@@ -328,36 +350,12 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 	for _, item := range items {
 		// Приводим item.Volume к float64
 		itemVol := float64(item.Volume)
-
-		// Исправляем: totalVolume += float64(item.Volume)
 		totalVolume += itemVol
 
-		// Для расчета pH
-		// item.Element.Ph скорее всего float32, приводим к float64 для math.Pow
-		phVal := float64(item.Element.Ph)
-		hConcentration := math.Pow(10, -phVal)
-
-		molesH := hConcentration * itemVol
-		totalProtons += molesH
-
 		// Для расчета концентрации
-		// item.Element.Concentration скорее всего float32
 		concVal := float64(item.Element.Concentration)
 		mass := concVal * itemVol
 		totalMass += mass
-	}
-
-	// Итоговый pH
-	var finalPh float64
-	if totalVolume > 0 {
-		finalHConcentration := totalProtons / totalVolume
-		if finalHConcentration > 0 {
-			finalPh = -math.Log10(finalHConcentration)
-		} else {
-			finalPh = 7.0 // Нейтральная среда, если нет протонов
-		}
-	} else {
-		finalPh = 7.0
 	}
 
 	// Итоговая концентрация
@@ -367,17 +365,21 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 	}
 
 	// Округляем до 2 знаков
-	finalPh = math.Round(finalPh*100) / 100
 	finalConcentration = math.Round(finalConcentration*100) / 100
+	// pH остается 0, будет рассчитан асинхронно
+	finalPh := 0.0
 	// --- КОНЕЦ РАСЧЕТА ---
 
-	// 3. Вызываем репозиторий с новыми данными
-	err = s.repo.CompleteMixedWithData(mixedID, finalPh, totalVolume, finalConcentration) // <-- Заменил finalVolume на totalVolume
+	// 3. Вызываем репозиторий с новыми данными (pH = 0, будет обновлен асинхронно)
+	err = s.repo.CompleteMixedWithData(mixedID, finalPh, totalVolume, finalConcentration)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Получаем обновленные данные для ответа
+	// 4. Асинхронно вызываем Python-сервис для расчета pH
+	go s.callAsyncService(mixedID)
+
+	// 5. Получаем обновленные данные для ответа
 	updatedMixed, err := s.repo.GetMixedByIDBasic(mixedID)
 	if err != nil {
 		return nil, err
@@ -387,8 +389,78 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 		MixedID:    mixedID,
 		Status:     updatedMixed.Status,
 		DateUpdate: updatedMixed.DateUpdate,
-		Message:    fmt.Sprintf("Заявка завершена. pH: %.2f, V: %.2f", finalPh, totalVolume),
+		Message:    fmt.Sprintf("Заявка завершена. pH будет рассчитан асинхронно. V: %.2f", totalVolume),
 	}, nil
+}
+
+// callAsyncService вызывает Python-сервис для асинхронного расчета pH
+func (s *MixingService) callAsyncService(mixedID uint) {
+	if s.asyncServiceURL == "" {
+		return // Если URL не настроен, пропускаем вызов
+	}
+
+	// Получаем элементы заявки для передачи в Python
+	items, err := s.repo.GetMixedItems(mixedID)
+	if err != nil {
+		fmt.Printf("Error getting mixed items for async service: %v\n", err)
+		return
+	}
+
+	// Получаем информацию о добавленной воде
+	currentMixed, err := s.repo.GetMixedByIDBasic(mixedID)
+	if err != nil {
+		fmt.Printf("Error getting mixed info for async service: %v\n", err)
+		return
+	}
+
+	// Формируем данные элементов для расчета pH
+	type ElementData struct {
+		Ph     float32 `json:"ph"`
+		Volume float32 `json:"volume"`
+	}
+
+	elementsData := make([]ElementData, len(items))
+	for i, item := range items {
+		elementsData[i] = ElementData{
+			Ph:     item.Element.Ph,
+			Volume: item.Volume,
+		}
+	}
+
+	url := fmt.Sprintf("%s/process", s.asyncServiceURL)
+	payload := map[string]interface{}{
+		"mixed_id":     mixedID,
+		"added_water":  currentMixed.AddedWater,
+		"elements":     elementsData,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("Error marshaling request: %v\n", err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Error creating request: %v\n", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error calling async service: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		fmt.Printf("Successfully called async service for mixed %d\n", mixedID)
+	} else {
+		fmt.Printf("Async service returned status %d for mixed %d\n", resp.StatusCode, mixedID)
+	}
 }
 
 // DeleteMixed удаляет заявку

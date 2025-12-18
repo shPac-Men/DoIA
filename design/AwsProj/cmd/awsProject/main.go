@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"AwsProj/internal/app/config"
 	"AwsProj/internal/app/dsn"
@@ -94,14 +95,18 @@ func main() {
 	userService := service.NewUserService(rep, conf)
 	logrus.Info("✅ UserService initialized")
 
-	mixingService := service.NewMixingService(rep)
+	asyncServiceURL := os.Getenv("ASYNC_SERVICE_URL")
+	if asyncServiceURL == "" {
+		asyncServiceURL = "http://localhost:8083"
+	}
+	mixingService := service.NewMixingService(rep, asyncServiceURL)
 	logrus.Info("✅ MixingService initialized")
 
 	elementService, err := service.NewElementService(
 		rep,
 		"localhost:9000",
-		"admin",
-		"admin123456",
+		"minioadmin",
+		"minioadmin",
 		"staticimages",
 	)
 	if err != nil {

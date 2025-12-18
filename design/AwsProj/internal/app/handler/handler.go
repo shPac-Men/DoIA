@@ -101,7 +101,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 		}
 	}
 
-	admin := api.Group("")
+	admin := api.Group("/admin")
 	admin.Use(h.auth.WithAuthCheck())
 	admin.Use(h.auth.AdminAccess())
 	{

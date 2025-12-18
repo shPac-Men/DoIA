@@ -143,6 +143,7 @@ type CartIconResponse struct {
 type MixedListRequest struct {
 	DateFrom string
 	DateTo   string
+	Status   string
 }
 
 type MixedListItem struct {
@@ -158,6 +159,7 @@ type MixedListItem struct {
 	TotalVolume    float64
 	AddedWater     float64
 	ItemsCount     int // <--- Добавляе
+	ProcessedCount int // Количество записей с ph > 0 (в нашем случае 1 или 0)
 }
 
 type MixedDetailResponse struct {

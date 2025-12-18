@@ -315,7 +315,8 @@ func (h *Handler) GetMyMixedList(ctx *gin.Context) {
 			Concentration:  item.Concentration,
 			TotalVolume:    item.TotalVolume,
 			AddedWater:     item.AddedWater,
-			ItemsCount:     item.ItemsCount, // <--- ВОТ ЗДЕСЬ
+			ItemsCount:     item.ItemsCount,      // <--- ВОТ ЗДЕСЬ
+			ProcessedCount: item.ProcessedCount, // Количество записей с ph > 0
 		}
 	}
 
@@ -433,6 +434,8 @@ func (h *Handler) GetMixedList(ctx *gin.Context) {
 			Concentration:  item.Concentration,
 			TotalVolume:    item.TotalVolume,
 			AddedWater:     item.AddedWater,
+			ItemsCount:     item.ItemsCount,
+			ProcessedCount: item.ProcessedCount,
 		}
 	}
 

@@ -145,7 +145,8 @@ type MixedListItem struct {
 	Concentration  float32 `json:"concentration"`
 	TotalVolume    float64 `json:"total_volume"`
 	AddedWater     float64 `json:"added_water"`
-	ItemsCount     int     `json:"items_count"` // <--- Добавляем
+	ItemsCount     int     `json:"items_count"`      // <--- Добавляем
+	ProcessedCount int     `json:"processed_count"` // Количество записей с ph > 0
 }
 
 type MixedDetailResponse struct {

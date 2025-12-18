@@ -179,12 +179,13 @@ func (r *Repository) CompleteCartAndCreateNew(userID uint, addedWater float64) (
 		}
 
 		// 4. Создаем новую корзину (draft)
+		// ModeratorID должен быть NULL (не 0 и не userID) для черновика, чтобы не нарушать foreign key constraint
 		newCart := ds.Mixed{
 			Status:        "draft",
 			DateCreate:    time.Now(),
 			DateUpdate:    time.Now(),
 			CreatorID:     userID,
-			ModeratorID:   userID,
+			ModeratorID:   nil, // NULL для черновика - модератор назначится при подтверждении
 			TotalVolume:   0,
 			Concentartion: 0,
 			Ph:            0,
@@ -273,11 +274,17 @@ func (r *Repository) GetOrCreateUserDraftOrder(ctx context.Context, userID int) 
 	if err != nil {
 		// Если черновик не найден, создаем новый
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// ModeratorID должен быть NULL (не 0) для черновика, чтобы не нарушать foreign key constraint
 			newCart := &ds.Mixed{
-				CreatorID:  uint(userID),
-				Status:     "draft",
-				DateCreate: time.Now(),
-				DateUpdate: time.Now(),
+				CreatorID:     uint(userID),
+				ModeratorID:   nil, // NULL для черновика - модератор назначится при подтверждении
+				Status:        "draft",
+				DateCreate:    time.Now(),
+				DateUpdate:    time.Now(),
+				Concentartion: 0,
+				Ph:            0,
+				TotalVolume:   0,
+				AddedWater:    0,
 			}
 			if err := r.db.WithContext(ctx).Create(newCart).Error; err != nil {
 				return nil, err

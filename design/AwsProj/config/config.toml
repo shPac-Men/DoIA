@@ -1,5 +1,6 @@
 ServiceHost = "0.0.0.0"
 ServicePort = 8082
+AsyncServiceURL = "http://localhost:8083"
 
 [jwt]
 token = "your-secret-key"

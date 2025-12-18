@@ -18,7 +18,7 @@ type Mixed struct {
 	AddedWater    float64      `gorm:"type:decimal(10,2)"`
 	DateFinish    sql.NullTime `gorm:"default:null"`
 	CreatorID     uint         `gorm:"not null"`
-	ModeratorID   uint
+	ModeratorID   *uint        `gorm:"default:null"` // Указатель, чтобы можно было использовать NULL
 	ElemMixes     []ElemMix `gorm:"foreignKey:MixedID"`
 
 	Creator   Users `gorm:"foreignKey:CreatorID"`

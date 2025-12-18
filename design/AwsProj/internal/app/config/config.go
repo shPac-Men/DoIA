@@ -12,9 +12,10 @@ import (
 )
 
 type Config struct {
-	ServiceHost string
-	ServicePort int
-	JWT         JWTConfig
+	ServiceHost     string
+	ServicePort     int
+	JWT             JWTConfig
+	AsyncServiceURL string
 }
 
 type JWTConfig struct {

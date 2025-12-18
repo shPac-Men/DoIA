@@ -21,12 +21,13 @@ func (r *Repository) AddElementToCart(userID, elementID uint, volume float32) er
 
 		// Если корзина не найдена, создаём новую
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// ModeratorID должен быть NULL (не 0 и не userID) для черновика, чтобы не нарушать foreign key constraint
 			cart = ds.Mixed{
 				Status:        "draft",
 				DateCreate:    time.Now(),
 				DateUpdate:    time.Now(),
 				CreatorID:     userID,
-				ModeratorID:   userID,
+				ModeratorID:   nil, // NULL для черновика - модератор назначится при подтверждении
 				Concentartion: 0,
 				Ph:            0,
 			}
@@ -90,11 +91,22 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 		Preload("Moderator").
 		Preload("ElemMixes") // <--- Загружаем элементы, чтобы посчитать их
 
-	// --- ФИЛЬТРЫ (без изменений) ---
+	// --- ФИЛЬТРЫ ---
 	if creatorID, ok := filters["creator_id"]; ok {
 		query = query.Where("creator_id = ?", creatorID)
 	}
-	// ... остальные фильтры ...
+
+	if dateFrom, ok := filters["date_from"]; ok {
+		query = query.Where("date_create >= ?", dateFrom)
+	}
+
+	if dateTo, ok := filters["date_to"]; ok {
+		query = query.Where("date_create <= ?", dateTo)
+	}
+
+	if status, ok := filters["status"]; ok && status != "" {
+		query = query.Where("status = ?", status)
+	}
 
 	query = query.Order("date_create DESC")
 
@@ -105,8 +117,15 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 
 	result := make([]map[string]interface{}, len(mixedList))
 	for i, mixed := range mixedList {
+		// Подсчитываем количество записей с заполненным ph
+		// В нашем случае ph обновляется в Mixed, поэтому это 1 или 0
+		processedCount := 0
+		if mixed.Ph > 0 {
+			processedCount = 1
+		}
+
 		modLogin := ""
-		if mixed.ModeratorID != 0 {
+		if mixed.ModeratorID != nil && *mixed.ModeratorID != 0 {
 			modLogin = mixed.Moderator.Login
 		}
 
@@ -123,6 +142,7 @@ func (r *Repository) GetMixedList(filters map[string]interface{}) ([]map[string]
 			"total_volume":    mixed.TotalVolume,
 			"added_water":     mixed.AddedWater,
 			"items_count":     len(mixed.ElemMixes), // <--- Считаем длину массива
+			"processed_count": processedCount,       // Количество записей с ph > 0
 		}
 	}
 
