@@ -61,6 +61,11 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 			elements.GET("/:id", h.GetElementById)
 		}
 
+		mixedPublic := api.Group("/mixed")
+		{
+			mixedPublic.PUT("/:id/process-result", h.UpdateProcessingResult)
+		}
+
 		mixing := api.Group("/mixing")
 		{
 			mixing.GET("/cart-icon", h.GetCartIcon)

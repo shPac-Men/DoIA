@@ -420,3 +420,24 @@ func (r *Repository) HardDeleteFromMixed(mixedID uint, elementID uint) error {
 		return nil
 	})
 }
+
+// repository.go
+
+// Интерфейс для Repository (если используется)
+// type MixedsRepository interface {
+//     UpdatePH(ctx context.Context, id int, ph float64) error
+// }
+
+func (r *Repository) UpdatePH(mixedID uint, ph float64) error {
+	// Обновляем только одно поле 'ph' у записи с указанным id
+	// Используем Model(&ds.Mixed{}) чтобы GORM знал какую таблицу обновлять
+	result := r.db.Model(&ds.Mixed{}).Where("id = ?", mixedID).Update("ph", ph)
+
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("заявка с id %d не найдена", mixedID)
+	}
+	return nil
+}

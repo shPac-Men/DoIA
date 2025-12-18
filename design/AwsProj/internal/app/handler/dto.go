@@ -191,3 +191,9 @@ type DeleteFromMixedRequest struct {
 	ElementID  uint `json:"element_id" binding:"required"`
 	HardDelete bool `json:"hard_delete"`
 }
+
+type ProcessingResultDTO struct {
+	// Используем указатель, чтобы отличать переданный 0 от отсутствия значения,
+	// или просто float64, если Python всегда шлет число.
+	Result float64 `json:"result"`
+}

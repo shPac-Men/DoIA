@@ -2,6 +2,7 @@ package handler
 
 import (
 	"AwsProj/internal/app/service"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -782,4 +783,53 @@ func convertMixedDetailToHandler(serviceMixed *service.MixedDetailResponse) Mixe
 		Items:          handlerItems,
 		ItemsCount:     serviceMixed.ItemsCount, // <--- ДОБАВИТЬ ВОТ ЭТО
 	}
+}
+
+const AsyncServiceSecret = "super-secret-key-8b"
+
+func (h *Handler) UpdateProcessingResult(ctx *gin.Context) {
+	// 1. Псевдо-авторизация (обязательно!)
+	if ctx.GetHeader("X-Secret-Key") != AsyncServiceSecret {
+		h.errorHandler(ctx, http.StatusForbidden, fmt.Errorf("invalid secret key"))
+		return
+	}
+
+	// 2. Получение ID
+	idStr := ctx.Param("id")
+	mixedID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		h.errorHandler(ctx, http.StatusBadRequest, fmt.Errorf("invalid id format"))
+		return
+	}
+
+	// 3. Парсинг простого JSON от Python-сервиса
+	// Нам не нужно заставлять Python сервис знать структуру UpdateMixedRequest,
+	// пусть шлет просто {"result": ...}
+	var input ProcessingResultDTO
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		h.errorHandler(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	// 4. Создаем запрос для сервиса (Mapping)
+	// Передаем значение в поле Ph
+	updateReq := &service.UpdateMixedRequest{
+		Ph: float32(input.Result),
+		// Остальные поля (Status, Concentration) останутся zero-value и игнорируются сервисом
+	}
+
+	// 5. Вызываем ваш универсальный метод сервиса
+	logrus.Infof("Async update for mixed %d: setting pH to %f", mixedID, input.Result)
+	err = h.MixingService.UpdateMixed(uint(mixedID), updateReq)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "не найдена") {
+			h.errorHandler(ctx, http.StatusNotFound, err)
+		} else {
+			h.errorHandler(ctx, http.StatusInternalServerError, err)
+		}
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"status": "ok", "message": "ph updated"})
 }

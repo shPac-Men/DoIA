@@ -457,3 +457,15 @@ func (s *MixingService) DeleteFromMixed(mixedID uint, userID uint, userRole stri
 		Message:   message,
 	}, nil
 }
+
+// service.go
+
+// Интерфейс для Service (если вы используете интерфейсы)
+// type MixedsService interface {
+//     UpdatePH(ctx context.Context, id int, ph float64) error
+// }
+
+func (s *MixingService) UpdateProcessingResult(mixedID uint, result float64) error {
+	// Можно добавить бизнес-логику, если нужно (например, валидацию значения pH)
+	return s.repo.UpdatePH(mixedID, result)
+}
