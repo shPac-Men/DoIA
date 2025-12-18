@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -193,14 +192,14 @@ func (s *UserService) GetAllUsers() ([]*UserProfileResponse, error) {
 }
 
 // UpdateUser обновляет данные пользователя
+// service/user_service.go
+
 func (s *UserService) UpdateUser(userID uint, req *UpdateUserRequest) error {
-	// Валидация
+	// Валидация логина (без изменений)
 	if req.Login != "" {
 		if len(req.Login) < 3 || len(req.Login) > 25 {
 			return fmt.Errorf("логин должен быть от 3 до 25 символов")
 		}
-
-		// Проверяем уникальность логина
 		exists, err := s.repo.CheckLoginExists(req.Login, userID)
 		if err != nil {
 			return fmt.Errorf("ошибка проверки логина: %v", err)
@@ -210,11 +209,14 @@ func (s *UserService) UpdateUser(userID uint, req *UpdateUserRequest) error {
 		}
 	}
 
-	if req.Password != "" {
-		if len(req.Password) < 6 {
-			return fmt.Errorf("пароль должен быть не менее 6 символов")
-		}
-	}
+	/*
+	   // ---- ПРОВЕРКА ДЛИНЫ ПАРОЛЯ УДАЛЕНА ----
+	   if req.Password != "" {
+	       if len(req.Password) < 6 {
+	           return fmt.Errorf("пароль должен быть не менее 6 символов")
+	       }
+	   }
+	*/
 
 	// Подготавливаем обновления
 	updates := make(map[string]interface{})
@@ -223,20 +225,14 @@ func (s *UserService) UpdateUser(userID uint, req *UpdateUserRequest) error {
 		updates["login"] = req.Login
 	}
 	if req.Password != "" {
-		// Хешируем новый пароль
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("ошибка хеширования пароля: %v", err)
-		}
-		updates["password"] = string(hashedPassword)
+		updates["password"] = req.Password
 	}
 
-	// Если нет полей для обновления
 	if len(updates) == 0 {
 		return fmt.Errorf("нет полей для обновления")
 	}
 
-	// Выполняем обновление
+	// Выполняем обновление в БД
 	err := s.repo.UpdateUser(userID, updates)
 	if err != nil {
 		return err

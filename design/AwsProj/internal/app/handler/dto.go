@@ -186,3 +186,8 @@ type CreateMixingRequest struct {
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description"`
 }
+
+type DeleteFromMixedRequest struct {
+	ElementID  uint `json:"element_id" binding:"required"`
+	HardDelete bool `json:"hard_delete"`
+}

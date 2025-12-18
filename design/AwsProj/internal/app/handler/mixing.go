@@ -642,52 +642,99 @@ func (h *Handler) DeleteMixed(ctx *gin.Context) {
 
 // DeleteFromMixed godoc
 // @Summary Delete element from order
-// @Description Remove a chemical element from mixing order (Admin only)
-// @Tags admin
+// @Description Remove a chemical element from a mixing order. Users can only delete from their own drafts, Admins can delete from any.
+// @Tags mixed
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Order ID"
-// @Param request body service.DeleteFromMixedRequest true "Element to remove"
+// @Param request body DeleteFromMixedRequest true "Element to remove"
 // @Success 204 "No Content"
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Router /admin/mixed/{id}/items [delete]
+// @Failure 400 {object} ErrorResponse "Invalid request data"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden (not owner)"
+// @Failure 404 {object} ErrorResponse "Draft not found"
+// @Router /mixed/{id}/items [delete]
 func (h *Handler) DeleteFromMixed(ctx *gin.Context) {
+	// 1. Получение ID черновика
 	idStr := ctx.Param("id")
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		logrus.Warnf("❌ DeleteFromMixed: Invalid ID - %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid mixed ID",
-		})
+		h.errorHandler(ctx, http.StatusBadRequest, err)
 		return
 	}
 
-	var req service.DeleteFromMixedRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logrus.Warnf("❌ DeleteFromMixed: Invalid request - %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
-		})
+	// 2. Парсинг JSON в локальную DTO (С ТЕГАМИ!)
+	var reqDTO DeleteFromMixedRequest
+	if err := ctx.ShouldBindJSON(&reqDTO); err != nil {
+		logrus.Warnf("❌ DeleteFromMixed: Invalid JSON - %v", err)
+		h.errorHandler(ctx, http.StatusBadRequest, err)
 		return
 	}
 
-	logrus.Infof("🗑️ DeleteFromMixed: admin, mixed=%d", mixedID)
+	// 3. Конвертация в структуру сервиса (без тегов)
+	serviceReq := service.DeleteFromMixedRequest{
+		ElementID:  reqDTO.ElementID,
+		HardDelete: reqDTO.HardDelete,
+	}
 
-	_, err = h.MixingService.DeleteFromMixed(uint(mixedID), &req)
+	// 4. Получение данных о пользователе
+	userID := h.auth.GetUserID(ctx)
+	userRole := h.auth.GetUserRole(ctx)
+
+	// 5. Вызов сервиса
+	logrus.Infof("Attempting to delete element %d from draft %d by user %d", serviceReq.ElementID, mixedID, userID)
+
+	_, err = h.MixingService.DeleteFromMixed(uint(mixedID), userID, userRole, &serviceReq)
+
+	// 6. Обработка ответа
 	if err != nil {
-		logrus.Errorf("❌ Failed to delete from mixed: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		if strings.Contains(err.Error(), "forbidden") {
+			h.errorHandler(ctx, http.StatusForbidden, err)
+		} else if strings.Contains(err.Error(), "not found") {
+			h.errorHandler(ctx, http.StatusNotFound, err)
+		} else {
+			h.errorHandler(ctx, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
-	logrus.Infof("✅ Element removed from order: mixed=%d", mixedID)
+	// 7. Успех
+	logrus.Infof("✅ Element %d removed from draft %d", serviceReq.ElementID, mixedID)
 	ctx.Status(http.StatusNoContent)
 }
+
+// --- Фрагмент метода RegisterHandler ---
+/*
+func (h *Handler) RegisterHandler(router *gin.Engine) {
+    // ...
+
+    // Группа для всех авторизованных пользователей
+    protected := api.Group("")
+    protected.Use(h.auth.WithAuthCheck())
+    {
+        // ... другие роуты ...
+        mixed := protected.Group("/mixed")
+        {
+            mixed.GET("my", h.GetMyMixedList)
+            mixed.GET("my/:id", h.GetMyMixedByID)
+
+            // ПЕРЕНЕСЕННЫЙ МАРШРУТ
+            mixed.DELETE("/:id/items", h.DeleteFromMixed)
+        }
+    }
+
+    // Группа для админов
+    admin := api.Group("")
+    admin.Use(h.auth.WithAuthCheck(), h.auth.AdminAccess())
+    {
+        // ...
+        // Роут /admin/mixed/:id/items УБРАН ИЗ ЭТОЙ ГРУППЫ
+    }
+
+    // ...
+}
+*/
 
 // Вспомогательные функции
 func formatTime(t time.Time) string {

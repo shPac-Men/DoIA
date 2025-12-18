@@ -416,15 +416,27 @@ func (s *MixingService) DeleteMixed(mixedID uint, req *DeleteMixedRequest) (*Del
 	}, nil
 }
 
-// DeleteFromMixed удаляет элемент из заявки
-func (s *MixingService) DeleteFromMixed(mixedID uint, req *DeleteFromMixedRequest) (*DeleteFromMixedResponse, error) {
+// НОВЫЙ МЕТОД DeleteFromMixed (Исправленный)
+func (s *MixingService) DeleteFromMixed(mixedID uint, userID uint, userRole string, req *DeleteFromMixedRequest) (*DeleteMixedResponse, error) {
 	if req.ElementID == 0 {
-		return nil, fmt.Errorf("element_id обязателен")
+		return nil, errors.New("element_id обязателен")
 	}
 
-	var err error
-	var message string
+	// 1. Получаем черновик.
+	// ВАЖНО: Ваш репозиторий возвращает 3 значения: (mixed, items, err)
+	// Нам нужен только mixed для проверки владельца.
+	mixed, _, err := s.repo.GetMixedByID(mixedID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения черновика: %v", err)
+	}
 
+	// 2. Проверка прав
+	if userRole != "admin" && mixed.CreatorID != userID {
+		return nil, errors.New("forbidden: у вас нет прав на изменение этого черновика")
+	}
+
+	// 3. Удаление
+	var message string
 	if req.HardDelete {
 		err = s.repo.HardDeleteFromMixed(mixedID, req.ElementID)
 		message = "Элемент полностью удален из заявки"
@@ -437,9 +449,10 @@ func (s *MixingService) DeleteFromMixed(mixedID uint, req *DeleteFromMixedReques
 		return nil, err
 	}
 
-	return &DeleteFromMixedResponse{
+	// 4. Возврат ответа (БЕЗ поля ElementID, так как его нет в вашей структуре)
+	return &DeleteMixedResponse{
 		MixedID:   mixedID,
-		ElementID: req.ElementID,
+		Status:    "updated", // Или mixed.Status
 		DeletedAt: time.Now(),
 		Message:   message,
 	}, nil

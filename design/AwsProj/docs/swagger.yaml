@@ -48,6 +48,15 @@ definitions:
     required:
     - title
     type: object
+  handler.DeleteFromMixedRequest:
+    properties:
+      element_id:
+        type: integer
+      hard_delete:
+        type: boolean
+    required:
+    - element_id
+    type: object
   handler.ElementResponse:
     properties:
       concentration:
@@ -342,13 +351,6 @@ definitions:
       message:
         type: string
     type: object
-  service.DeleteFromMixedRequest:
-    properties:
-      elementID:
-        type: integer
-      hardDelete:
-        type: boolean
-    type: object
   service.DeleteMixedRequest:
     properties:
       hardDelete:
@@ -619,45 +621,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Complete mixing order
-      tags:
-      - admin
-  /admin/mixed/{id}/items:
-    delete:
-      consumes:
-      - application/json
-      description: Remove a chemical element from mixing order (Admin only)
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Element to remove
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.DeleteFromMixedRequest'
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Delete element from order
       tags:
       - admin
   /admin/users:
@@ -1094,6 +1057,50 @@ paths:
       summary: Upload element image
       tags:
       - elements
+  /mixed/{id}/items:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a chemical element from a mixing order. Users can only delete
+        from their own drafts, Admins can delete from any.
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Element to remove
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DeleteFromMixedRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden (not owner)
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Draft not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete element from order
+      tags:
+      - mixed
   /mixed/my:
     get:
       consumes:

@@ -91,6 +91,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 		{
 			mixed.GET("my", h.GetMyMixedList)
 			mixed.GET("my/:id", h.GetMyMixedByID)
+			mixed.DELETE("/:id/items", h.DeleteFromMixed)
 
 		}
 	}
@@ -114,7 +115,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 			mixed.POST("", h.CreateMixing)
 			mixed.PUT("/:id", h.UpdateMixed)
 			mixed.PUT("/:id/complete", h.CompleteMixed)
-			mixed.DELETE("/:id/items", h.DeleteFromMixed)
+			//mixed.DELETE("/:id/items", h.DeleteFromMixed)
 			mixed.DELETE("/:id", h.DeleteMixed)
 		}
 

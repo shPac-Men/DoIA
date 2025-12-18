@@ -359,7 +359,6 @@ func (r *Repository) HardDeleteMixed(mixedID uint) error {
 	})
 }
 
-// DeleteFromMixed удаляет элемент из заявки по mixed_id и element_id
 func (r *Repository) DeleteFromMixed(mixedID uint, elementID uint) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// Проверяем существование заявки
@@ -371,37 +370,26 @@ func (r *Repository) DeleteFromMixed(mixedID uint, elementID uint) error {
 			}
 			return err
 		}
-
-		// Проверяем существование элемента в заявке
+		// ... остальной код как у вас ...
 		var elemMix ds.ElemMix
-		err = tx.Where("mixed_id = ? AND element_id = ? AND is_delete = ?", mixedID, elementID, false).
-			First(&elemMix).Error
+		err = tx.Where("mixed_id = ? AND element_id = ? AND is_delete = ?", mixedID, elementID, false).First(&elemMix).Error
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("элемент не найден в заявке")
 			}
 			return err
 		}
-
-		// Выполняем soft delete элемента
-		result := tx.Model(&ds.ElemMix{}).
-			Where("mixed_id = ? AND element_id = ?", mixedID, elementID).
-			Update("is_delete", true)
-
+		result := tx.Model(&ds.ElemMix{}).Where("mixed_id = ? AND element_id = ?", mixedID, elementID).Update("is_delete", true)
 		if result.Error != nil {
 			return result.Error
 		}
-
 		if result.RowsAffected == 0 {
 			return fmt.Errorf("элемент не был удален")
 		}
-
-		// Обновляем дату изменения заявки
 		mixed.DateUpdate = time.Now()
 		if err := tx.Save(&mixed).Error; err != nil {
 			return err
 		}
-
 		return nil
 	})
 }
@@ -409,7 +397,7 @@ func (r *Repository) DeleteFromMixed(mixedID uint, elementID uint) error {
 // HardDeleteFromMixed полностью удаляет элемент из заявки
 func (r *Repository) HardDeleteFromMixed(mixedID uint, elementID uint) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		// Проверяем существование заявки
+		// ... код как у вас ...
 		var mixed ds.Mixed
 		err := tx.Where("id = ? AND status = ?", mixedID, "draft").First(&mixed).Error
 		if err != nil {
@@ -418,25 +406,17 @@ func (r *Repository) HardDeleteFromMixed(mixedID uint, elementID uint) error {
 			}
 			return err
 		}
-
-		// Полностью удаляем элемент
-		result := tx.Where("mixed_id = ? AND element_id = ?", mixedID, elementID).
-			Delete(&ds.ElemMix{})
-
+		result := tx.Where("mixed_id = ? AND element_id = ?", mixedID, elementID).Delete(&ds.ElemMix{})
 		if result.Error != nil {
 			return result.Error
 		}
-
 		if result.RowsAffected == 0 {
 			return fmt.Errorf("элемент не найден в заявке")
 		}
-
-		// Обновляем дату изменения заявки
 		mixed.DateUpdate = time.Now()
 		if err := tx.Save(&mixed).Error; err != nil {
 			return err
 		}
-
 		return nil
 	})
 }
