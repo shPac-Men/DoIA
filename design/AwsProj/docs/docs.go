@@ -1276,6 +1276,11 @@ const docTemplate = `{
         },
         "/mixing/cart-icon": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth  \u003c--- ДОБАВИТЬ ЭТУ СТРОКУ": []
+                    }
+                ],
                 "description": "Get cart item count for display in UI (public endpoint, works for guests too)",
                 "consumes": [
                     "application/json"
@@ -1598,6 +1603,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/handler.MixedDetailItem"
                     }
                 },
+                "items_count": {
+                    "description": "\u003c--- Добавляем с JSON тегом",
+                    "type": "integer"
+                },
                 "moderator_login": {
                     "type": "string"
                 },
@@ -1634,6 +1643,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "items_count": {
+                    "description": "\u003c--- Добавляем",
                     "type": "integer"
                 },
                 "moderator_login": {

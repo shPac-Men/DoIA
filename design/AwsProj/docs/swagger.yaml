@@ -130,6 +130,9 @@ definitions:
         items:
           $ref: '#/definitions/handler.MixedDetailItem'
         type: array
+      items_count:
+        description: <--- Добавляем с JSON тегом
+        type: integer
       moderator_login:
         type: string
       ph:
@@ -154,6 +157,9 @@ definitions:
       date_update:
         type: string
       id:
+        type: integer
+      items_count:
+        description: <--- Добавляем
         type: integer
       moderator_login:
         type: string
@@ -1205,6 +1211,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handler.CartIconResponse'
+      security:
+      - BearerAuth  <--- ДОБАВИТЬ ЭТУ СТРОКУ: []
       summary: Get cart icon info
       tags:
       - mixing

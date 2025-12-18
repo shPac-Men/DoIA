@@ -177,6 +177,7 @@ func (h *Handler) RemoveFromMixing(ctx *gin.Context) {
 // @Tags mixing
 // @Accept json
 // @Produce json
+// @Security BearerAuth  <--- ДОБАВИТЬ ЭТУ СТРОКУ
 // @Success 200 {object} CartIconResponse
 // @Router /mixing/cart-icon [get]
 func (h *Handler) GetCartIcon(ctx *gin.Context) {
