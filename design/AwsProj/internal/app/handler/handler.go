@@ -89,6 +89,7 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 			mixing.GET("", h.GetMixingPage)
 			mixing.POST("/items", h.AddToMixing)
 			mixing.POST("/remove", h.RemoveFromMixing)
+			mixing.POST("/:id/submit", h.SubmitMixedForProcessing)
 			//mixing.GET("/cart-icon", h.GetCartIcon)
 		}
 

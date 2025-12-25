@@ -172,6 +172,83 @@ func (h *Handler) RemoveFromMixing(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+// SubmitMixedForProcessing godoc
+// @Summary Submit mixing order for processing
+// @Description Submit user's mixing order for processing (changes status to "pending" and starts async pH calculation)
+// @Tags mixing
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Param request body SubmitMixedRequest true "Order data with added water"
+// @Success 200 {object} service.CompleteMixedResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /mixing/{id}/submit [post]
+func (h *Handler) SubmitMixedForProcessing(ctx *gin.Context) {
+	userID := h.auth.GetUserID(ctx)
+	if userID == 0 {
+		logrus.Warn("❌ SubmitMixedForProcessing: Unauthorized access")
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	idStr := ctx.Param("id")
+	mixedID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		logrus.Warnf("❌ SubmitMixedForProcessing: Invalid ID - %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid mixed ID",
+		})
+		return
+	}
+
+	var req SubmitMixedRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		// Если не передан added_water, используем значение из заявки или дефолтное
+		req.AddedWater = 100.0
+	}
+
+	// Проверяем, что заявка принадлежит пользователю
+	mixed, _, err := h.Repository.GetMixedByID(uint(mixedID))
+	if err != nil {
+		logrus.Errorf("❌ Order not found: %v", err)
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"error": "Order not found",
+		})
+		return
+	}
+
+	if mixed.CreatorID != userID {
+		logrus.Warnf("⚠️ Access denied: user=%d tried to submit order=%d (creator=%d)", userID, mixedID, mixed.CreatorID)
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"error": "You can only submit your own orders",
+		})
+		return
+	}
+
+	logrus.Infof("📤 SubmitMixedForProcessing: user=%d, mixed=%d, added_water=%.2f", userID, mixedID, req.AddedWater)
+
+	result, err := h.MixingService.SubmitMixedForProcessing(uint(mixedID), req.AddedWater)
+	if err != nil {
+		logrus.Errorf("❌ Failed to submit: %v", err)
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "не найден") || strings.Contains(err.Error(), "пуст") {
+			statusCode = http.StatusBadRequest
+		}
+		ctx.JSON(statusCode, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	logrus.Infof("✅ Order submitted for processing: mixed=%d", mixedID)
+	ctx.JSON(http.StatusOK, result)
+}
+
 // GetCartIcon godoc
 // @Summary Get cart icon info
 // @Description Get cart item count for display in UI (public endpoint, works for guests too)
@@ -315,7 +392,7 @@ func (h *Handler) GetMyMixedList(ctx *gin.Context) {
 			Concentration:  item.Concentration,
 			TotalVolume:    item.TotalVolume,
 			AddedWater:     item.AddedWater,
-			ItemsCount:     item.ItemsCount,      // <--- ВОТ ЗДЕСЬ
+			ItemsCount:     item.ItemsCount,     // <--- ВОТ ЗДЕСЬ
 			ProcessedCount: item.ProcessedCount, // Количество записей с ph > 0
 		}
 	}
@@ -369,8 +446,11 @@ func (h *Handler) GetMyMixedByID(ctx *gin.Context) {
 		return
 	}
 
+	// Проверяем права доступа: модератор может просматривать любые заявки
+	userRole := h.auth.GetUserRole(ctx)
 	currentLogin := h.auth.GetUserLogin(ctx)
-	if serviceMixed.CreatorLogin != currentLogin {
+
+	if userRole != "admin" && serviceMixed.CreatorLogin != currentLogin {
 		logrus.Warnf("⚠️ Access denied: user=%d tried to access order=%d (creator=%s)", userID, mixedID, serviceMixed.CreatorLogin)
 		ctx.JSON(http.StatusForbidden, gin.H{
 			"error": "You can only view your own orders",
@@ -791,37 +871,27 @@ func convertMixedDetailToHandler(serviceMixed *service.MixedDetailResponse) Mixe
 const AsyncServiceSecret = "super-secret-key-8b"
 
 func (h *Handler) UpdateProcessingResult(ctx *gin.Context) {
-	// 1. Псевдо-авторизация (обязательно!)
 	if ctx.GetHeader("X-Secret-Key") != AsyncServiceSecret {
 		h.errorHandler(ctx, http.StatusForbidden, fmt.Errorf("invalid secret key"))
 		return
 	}
 
-	// 2. Получение ID
 	idStr := ctx.Param("id")
 	mixedID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		h.errorHandler(ctx, http.StatusBadRequest, fmt.Errorf("invalid id format"))
 		return
 	}
-
-	// 3. Парсинг простого JSON от Python-сервиса
-	// Нам не нужно заставлять Python сервис знать структуру UpdateMixedRequest,
-	// пусть шлет просто {"result": ...}
 	var input ProcessingResultDTO
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		h.errorHandler(ctx, http.StatusBadRequest, err)
 		return
 	}
 
-	// 4. Создаем запрос для сервиса (Mapping)
-	// Передаем значение в поле Ph
 	updateReq := &service.UpdateMixedRequest{
 		Ph: float32(input.Result),
-		// Остальные поля (Status, Concentration) останутся zero-value и игнорируются сервисом
 	}
 
-	// 5. Вызываем ваш универсальный метод сервиса
 	logrus.Infof("Async update for mixed %d: setting pH to %f", mixedID, input.Result)
 	err = h.MixingService.UpdateMixed(uint(mixedID), updateReq)
 

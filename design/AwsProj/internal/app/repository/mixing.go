@@ -325,6 +325,39 @@ func (r *Repository) CompleteMixedWithData(mixedID uint, ph, volume, concentrati
 	})
 }
 
+// SubmitMixedForProcessing отправляет заявку на обработку (устанавливает статус "pending")
+func (r *Repository) SubmitMixedForProcessing(mixedID uint, addedWater, volume, concentration float64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var mixed ds.Mixed
+
+		// Проверяем существование и что заявка в статусе "draft"
+		err := tx.Where("id = ? AND status = ?", mixedID, "draft").First(&mixed).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("черновик заявки не найден или уже обработан")
+			}
+			return err
+		}
+
+		// Данные для обновления - устанавливаем статус "pending" (в работе)
+		updates := map[string]interface{}{
+			"status":        "pending",
+			"date_update":   time.Now(),
+			"added_water":   addedWater,
+			"ph":            0.0, // pH будет рассчитан асинхронно
+			"total_volume":  volume,
+			"concentartion": concentration,
+		}
+
+		// Выполняем обновление
+		err = tx.Model(&ds.Mixed{}).
+			Where("id = ?", mixedID).
+			Updates(updates).Error
+
+		return err
+	})
+}
+
 func (r *Repository) GetMixedByIDBasic(id uint) (*ds.Mixed, error) {
 	mixed := &ds.Mixed{}
 	err := r.db.First(mixed, id).Error

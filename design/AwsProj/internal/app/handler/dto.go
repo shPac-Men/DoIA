@@ -86,6 +86,10 @@ type RemoveFromMixingRequest struct {
 	ElementID int `json:"element_id" binding:"required"`
 }
 
+type SubmitMixedRequest struct {
+	AddedWater float64 `json:"added_water"`
+}
+
 type CartIconResponse struct {
 	DraftOrderID int `json:"draft_order_id"`
 	ItemsCount   int `json:"items_count"`

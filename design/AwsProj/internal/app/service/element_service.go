@@ -66,8 +66,8 @@ func NewElementService(repo *repository.Repository, minioEndpoint, minioAccessKe
 	
 	if err == nil {
 		// Проверяем существование бакета, если нет - создаем (но не критично, если не получится)
-		ctx := context.Background()
-		exists, err := minioClient.BucketExists(ctx, bucketName)
+	ctx := context.Background()
+	exists, err := minioClient.BucketExists(ctx, bucketName)
 		
 		// #region agent log
 		logEntry3 := map[string]interface{}{
@@ -83,8 +83,8 @@ func NewElementService(repo *repository.Repository, minioEndpoint, minioAccessKe
 		// #endregion
 		
 		if err == nil && !exists {
-			err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
-			if err != nil {
+		err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		if err != nil {
 				// #region agent log
 				logEntry4 := map[string]interface{}{
 					"sessionId": "debug-session",

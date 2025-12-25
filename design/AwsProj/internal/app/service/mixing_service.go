@@ -376,7 +376,7 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 		return nil, err
 	}
 
-	// 4. Асинхронно вызываем Python-сервис для расчета pH
+	// 4. Асинхронно вызываем Python-сервис для расчета pH (только модератор может вызвать CompleteMixed)
 	go s.callAsyncService(mixedID)
 
 	// 5. Получаем обновленные данные для ответа
@@ -390,6 +390,72 @@ func (s *MixingService) CompleteMixed(mixedID uint, req *CompleteMixedRequest) (
 		Status:     updatedMixed.Status,
 		DateUpdate: updatedMixed.DateUpdate,
 		Message:    fmt.Sprintf("Заявка завершена. pH будет рассчитан асинхронно. V: %.2f", totalVolume),
+	}, nil
+}
+
+// SubmitMixedForProcessing отправляет заявку на обработку (для пользователя)
+// Устанавливает статус "pending", pH остается 0 (будет рассчитан модератором)
+func (s *MixingService) SubmitMixedForProcessing(mixedID uint, addedWater float64) (*CompleteMixedResponse, error) {
+	// 1. Получаем элементы заказа для расчета
+	items, err := s.repo.GetMixedItems(mixedID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(items) == 0 {
+		return nil, fmt.Errorf("заказ пуст, невозможно отправить на обработку")
+	}
+
+	// 2. Валидация объемов
+	for _, item := range items {
+		if item.Volume <= 0 {
+			return nil, fmt.Errorf("объем элемента '%s' должен быть положительным", item.Element.Name)
+		}
+	}
+
+	// --- РАСЧЕТ ОБЪЕМА И КОНЦЕНТРАЦИИ (pH будет рассчитан асинхронно) ---
+	var totalVolume float64
+	var totalMass float64
+
+	// Учитываем добавленную воду
+	totalVolume = addedWater
+
+	for _, item := range items {
+		itemVol := float64(item.Volume)
+		totalVolume += itemVol
+
+		concVal := float64(item.Element.Concentration)
+		mass := concVal * itemVol
+		totalMass += mass
+	}
+
+	// Итоговая концентрация
+	var finalConcentration float64
+	if totalVolume > 0 {
+		finalConcentration = totalMass / totalVolume
+	}
+	finalConcentration = math.Round(finalConcentration*100) / 100
+	// pH будет рассчитан асинхронно, поэтому передаем 0.0
+	// --- КОНЕЦ РАСЧЕТА ---
+
+	// 3. Устанавливаем статус "pending" (в работе)
+	// НЕ вызываем Python-сервис - это делает только модератор при подтверждении (кнопка "Готов")
+	err = s.repo.SubmitMixedForProcessing(mixedID, addedWater, totalVolume, finalConcentration)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Получаем обновленные данные для ответа
+	updatedMixed, err := s.repo.GetMixedByIDBasic(mixedID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CompleteMixedResponse{
+		MixedID:    mixedID,
+		Status:     updatedMixed.Status,
+		DateUpdate: updatedMixed.DateUpdate,
+		Message:    fmt.Sprintf("Заявка отправлена на обработку. pH будет рассчитан модератором. V: %.2f", totalVolume),
 	}, nil
 }
 
