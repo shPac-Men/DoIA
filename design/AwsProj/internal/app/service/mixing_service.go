@@ -3,8 +3,8 @@ package service
 import (
 	"AwsProj/internal/app/ds"
 	"AwsProj/internal/app/repository" // <--- Обязательно добавь этот импорт!
-	"database/sql"                    // <--- Обязательно добавь этот импорт!
 	"bytes"
+	"database/sql" // <--- Обязательно добавь этот импорт!
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"time"
 )
+
+const GoToPythonSecret = "super-secret-key-8b"
 
 type MixingService struct {
 	repo            *repository.Repository
@@ -195,7 +197,7 @@ func (s *MixingService) convertToMixedListItems(mixedData []map[string]interface
 			Concentration:  item["concentration"].(float32),
 			TotalVolume:    item["total_volume"].(float64),
 			AddedWater:     item["added_water"].(float64),
-			ItemsCount:     itemsCount,      // <--- Добавили
+			ItemsCount:     itemsCount,     // <--- Добавили
 			ProcessedCount: processedCount, // Количество записей с ph > 0
 		}
 
@@ -461,6 +463,7 @@ func (s *MixingService) SubmitMixedForProcessing(mixedID uint, addedWater float6
 
 // callAsyncService вызывает Python-сервис для асинхронного расчета pH
 func (s *MixingService) callAsyncService(mixedID uint) {
+
 	if s.asyncServiceURL == "" {
 		return // Если URL не настроен, пропускаем вызов
 	}
@@ -495,9 +498,9 @@ func (s *MixingService) callAsyncService(mixedID uint) {
 
 	url := fmt.Sprintf("%s/process", s.asyncServiceURL)
 	payload := map[string]interface{}{
-		"mixed_id":     mixedID,
-		"added_water":  currentMixed.AddedWater,
-		"elements":     elementsData,
+		"mixed_id":    mixedID,
+		"added_water": currentMixed.AddedWater,
+		"elements":    elementsData,
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -513,6 +516,7 @@ func (s *MixingService) callAsyncService(mixedID uint) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Secret-Key", GoToPythonSecret)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
